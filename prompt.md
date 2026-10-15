@@ -80,7 +80,9 @@
   See `docs/phases/03-widget-planning.md`.
 - **Phase 4 ✅ — Limits & blocking** (2026-10-15). Accessibility service, block screen, always-allowed. CI run 38755465576 green.
   See `docs/phases/04-limits-blocking.md`.
-- Next: **phase 5 — Earnings + learning** (R25–R28).
+- **Phase 5 ✅ — Earnings + learning** (2026-10-15). Earning log, ₹/hour, learning streak. CI run 38755944663 green.
+  See `docs/phases/05-earnings-learning.md`.
+- Next: **phase 6 — Review + durability** (R6, R24, R29–R31, R33).
 
 - Open risks / owner items: `docs/REQUIREMENTS.md` §12 lists six things only the
   owner can supply (his earning / waste / never-block app list, his real ceilings
