@@ -154,7 +154,6 @@ fun DayLedgerApp() {
             "settings" -> SettingsScreen(onExportCsv = { exportLauncher.launch("dayledger.csv") }, onBackup = { })
         }
     }
-    }
 }
 
 @Composable
