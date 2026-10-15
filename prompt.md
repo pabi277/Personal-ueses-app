@@ -78,7 +78,9 @@
   See `docs/phases/02-sweet-notifications.md`.
 - **Phase 3 ✅ — Widget + planning** (2026-10-15). Glance widget, timeline, templates, Tomorrow. CI run 38753962790 green.
   See `docs/phases/03-widget-planning.md`.
-- Next: **phase 4 — Limits & blocking** (R16–R19).
+- **Phase 4 ✅ — Limits & blocking** (2026-10-15). Accessibility service, block screen, always-allowed. CI run 38755465576 green.
+  See `docs/phases/04-limits-blocking.md`.
+- Next: **phase 5 — Earnings + learning** (R25–R28).
 
 - Open risks / owner items: `docs/REQUIREMENTS.md` §12 lists six things only the
   owner can supply (his earning / waste / never-block app list, his real ceilings
