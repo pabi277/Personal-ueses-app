@@ -22,6 +22,7 @@ on:
 permissions:
   contents: read
   issues: write
+  issues: write
 
 concurrency:
   group: android-ci-${{ github.ref }}
@@ -50,6 +51,12 @@ jobs:
           chmod +x ./gradlew
           ./gradlew --no-daemon testDebugUnitTest assembleDebug 2>&1 | tee /tmp/build.log
           exit ${PIPESTATUS[0]}
+      - name: Report failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create --repo pabi277/Personal-ueses-app --title "CI build failure" --body "$(tail -n 150 /tmp/build.log)" || true
       - name: Report failure
         if: failure()
         env:
