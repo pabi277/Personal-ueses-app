@@ -18,7 +18,7 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.lightColorScheme
+import io.github.pabi277.dayledger.ui.theme.DayLedgerTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
@@ -55,7 +55,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme(colorScheme = lightColorScheme()) {
+            DayLedgerTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     DayLedgerApp()
                 }
@@ -146,6 +146,7 @@ fun DayLedgerApp() {
             }
         }
     ) { padding ->
+        androidx.compose.foundation.layout.Box(modifier = androidx.compose.ui.Modifier.padding(padding)) {
         when (screen) {
             "today" -> TodayScreen(state = state, onRefresh = { todayVm.refresh() })
             "categories" -> {
@@ -176,6 +177,7 @@ fun DayLedgerApp() {
                 items = listOf("categories" to "Categories", "notifications" to "Notifications", "learning" to "Learning", "report" to "Report", "settings" to "Settings", "tomorrow" to "Tomorrow")
             )
             "settings" -> SettingsScreen(onExportCsv = { exportLauncher.launch("dayledger.csv") }, onBackup = { })
+        }
         }
     }
 }
