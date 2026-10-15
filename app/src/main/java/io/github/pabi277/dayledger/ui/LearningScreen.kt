@@ -1,5 +1,6 @@
 package io.github.pabi277.dayledger.ui
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -25,21 +27,24 @@ import io.github.pabi277.dayledger.LearningViewModel
 fun LearningScreen(state: LearningUiState, viewModel: LearningViewModel) {
     var minutes by remember { mutableStateOf("30") }
     var text by remember { mutableStateOf("") }
-    LazyColumn(modifier = Modifier.padding(16.dp)) {
+    LazyColumn(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             Text("Learning", style = MaterialTheme.typography.headlineMedium)
-            Spacer(Modifier.height(8.dp))
-            Text("Streak: ${state.streak} days")
-            Spacer(Modifier.height(12.dp))
-            OutlinedTextField(value = minutes, onValueChange = { minutes = it }, label = { Text("Minutes") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = text, onValueChange = { text = it }, label = { Text("What you learned") }, modifier = Modifier.fillMaxWidth())
-            Button(onClick = { viewModel.logLearning(minutes.toIntOrNull() ?: 0, text) }) { Text("Log learning") }
-            Spacer(Modifier.height(12.dp))
-            Text("History", style = MaterialTheme.typography.titleMedium)
+            Card { Column(Modifier.padding(12.dp)) { Text("Streak: ${state.streak} days", style = MaterialTheme.typography.titleLarge) } }
         }
+        item {
+            Card {
+                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = minutes, onValueChange = { minutes = it }, label = { Text("Minutes") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = text, onValueChange = { text = it }, label = { Text("What you learned") }, modifier = Modifier.fillMaxWidth())
+                    Button(onClick = { viewModel.logLearning(minutes.toIntOrNull() ?: 0, text) }) { Text("Log learning") }
+                }
+            }
+        }
+        item { Text("History", style = MaterialTheme.typography.titleMedium) }
         items(state.entries) { e ->
-            Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                Text("${e.minutes}m — ${e.text}")
+            Card {
+                Column(Modifier.padding(12.dp)) { Text("${e.minutes}m — ${e.text}") }
             }
         }
     }
