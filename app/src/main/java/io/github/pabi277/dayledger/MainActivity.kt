@@ -27,6 +27,8 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.pabi277.dayledger.ui.CategoriesScreen
 import io.github.pabi277.dayledger.ui.OnboardingScreen
+import io.github.pabi277.dayledger.ui.EarningsScreen
+import io.github.pabi277.dayledger.ui.LearningScreen
 import io.github.pabi277.dayledger.ui.LimitsScreen
 import io.github.pabi277.dayledger.ui.NotificationsScreen
 import io.github.pabi277.dayledger.ui.PlanningScreen
@@ -52,11 +54,15 @@ fun DayLedgerApp() {
     val notificationVm: NotificationViewModel = viewModel()
     val planningVm: PlanningViewModel = viewModel()
     val limitsVm: LimitsViewModel = viewModel()
+    val earningsVm: EarningsViewModel = viewModel()
+    val learningVm: LearningViewModel = viewModel()
     val state by todayVm.state.collectAsState()
     val catState by categoryVm.state.collectAsState()
     val notifState by notificationVm.state.collectAsState()
     val planningState by planningVm.state.collectAsState()
     val limitsState by limitsVm.state.collectAsState()
+    val earningsState by earningsVm.state.collectAsState()
+    val learningState by learningVm.state.collectAsState()
 
     var screen by remember { mutableStateOf(if (state.hasUsagePermission) "today" else "onboarding") }
 
@@ -109,6 +115,16 @@ fun DayLedgerApp() {
             LimitsScreen(state = limitsState, viewModel = limitsVm)
             LaunchedEffect(Unit) { limitsVm.load() }
         }
+        "earnings" -> Column {
+            RowTabs(screen, onTab = { screen = it })
+            EarningsScreen(state = earningsState, viewModel = earningsVm)
+            LaunchedEffect(Unit) { earningsVm.load() }
+        }
+        "learning" -> Column {
+            RowTabs(screen, onTab = { screen = it })
+            LearningScreen(state = learningState, viewModel = learningVm)
+            LaunchedEffect(Unit) { learningVm.load() }
+        }
     }
 }
 
@@ -121,5 +137,7 @@ fun RowTabs(current: String, onTab: (String) -> Unit) {
         Button(onClick = { onTab("plan") }) { Text("Plan") }
         Button(onClick = { onTab("tomorrow") }) { Text("Tomorrow") }
         Button(onClick = { onTab("limits") }) { Text("Limits") }
+        Button(onClick = { onTab("earnings") }) { Text("Earn") }
+        Button(onClick = { onTab("learning") }) { Text("Learn") }
     }
 }

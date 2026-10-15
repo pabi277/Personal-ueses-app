@@ -16,11 +16,13 @@ import androidx.room.RoomDatabase
         TemplateEntity::class,
         TemplateItemEntity::class,
         LimitEventEntity::class,
+        EarningEntryEntity::class,
+        LearningEntryEntity::class,
         SettingEntity::class,
         NotificationRuleEntity::class,
         NotificationLogEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class DayLedgerDatabase : RoomDatabase() {
@@ -35,6 +37,8 @@ abstract class DayLedgerDatabase : RoomDatabase() {
     abstract fun dayPlanDao(): DayPlanDao
     abstract fun templateDao(): TemplateDao
     abstract fun limitEventDao(): LimitEventDao
+    abstract fun earningDao(): EarningDao
+    abstract fun learningDao(): LearningDao
 
     companion object {
         @Volatile
