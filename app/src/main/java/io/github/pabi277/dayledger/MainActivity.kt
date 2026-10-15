@@ -13,6 +13,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
@@ -91,10 +94,10 @@ fun DayLedgerApp() {
         if (state.hasUsagePermission) todayVm.loadToday()
     }
 
-    when (screen) {
-        "onboarding" -> OnboardingScreen(
+    if (screen == "onboarding") {
+        OnboardingScreen(
             hasUsagePermission = state.hasUsagePermission,
-            onRequestUsageAccess = { /* user opens settings manually */ },
+            onRequestUsageAccess = { },
             onRequestNotifications = {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -105,51 +108,52 @@ fun DayLedgerApp() {
                 if (todayVm.state.value.hasUsagePermission) screen = "today"
             }
         )
-        "today" -> Column {
-            RowTabs(screen, onTab = { screen = it })
-            TodayScreen(state = state, onRefresh = { todayVm.refresh() })
+        return
+    }
+
+    val tabs = listOf("today" to "Today", "plan" to "Plan", "limits" to "Limits", "earnings" to "Earn", "learning" to "Learn", "report" to "Report", "notifications" to "Notify", "settings" to "Settings", "categories" to "Cats")
+    Scaffold(
+        bottomBar = {
+            NavigationBar {
+                tabs.forEach { (key, label) ->
+                    NavigationBarItem(
+                        selected = screen == key,
+                        onClick = { screen = key },
+                        label = { Text(label) },
+                        icon = { Text(label.take(1)) }
+                    )
+                }
+            }
         }
-        "categories" -> Column {
-            RowTabs(screen, onTab = { screen = it })
-            CategoriesScreen(state = catState, viewModel = categoryVm)
-            LaunchedEffect(Unit) { categoryVm.load() }
+    ) { padding ->
+        when (screen) {
+            "today" -> TodayScreen(state = state, onRefresh = { todayVm.refresh() })
+            "categories" -> {
+                CategoriesScreen(state = catState, viewModel = categoryVm)
+                LaunchedEffect(Unit) { categoryVm.load() }
+            }
+            "notifications" -> NotificationsScreen(state = notifState, viewModel = notificationVm)
+            "plan" -> PlanningScreen(state = planningState, viewModel = planningVm, dateKey = java.time.LocalDate.now().toString())
+            "tomorrow" -> PlanningScreen(state = planningState, viewModel = planningVm, dateKey = java.time.LocalDate.now().plusDays(1).toString())
+            "limits" -> {
+                LimitsScreen(state = limitsState, viewModel = limitsVm)
+                LaunchedEffect(Unit) { limitsVm.load() }
+            }
+            "earnings" -> {
+                EarningsScreen(state = earningsState, viewModel = earningsVm)
+                LaunchedEffect(Unit) { earningsVm.load() }
+            }
+            "learning" -> {
+                LearningScreen(state = learningState, viewModel = learningVm)
+                LaunchedEffect(Unit) { learningVm.load() }
+            }
+            "report" -> {
+                WeeklyReportScreen(state = weeklyState)
+                LaunchedEffect(Unit) { weeklyVm.load() }
+            }
+            "settings" -> SettingsScreen(onExportCsv = { exportLauncher.launch("dayledger.csv") }, onBackup = { })
         }
-        "notifications" -> Column {
-            RowTabs(screen, onTab = { screen = it })
-            NotificationsScreen(state = notifState, viewModel = notificationVm)
-        }
-        "plan" -> Column {
-            RowTabs(screen, onTab = { screen = it })
-            PlanningScreen(state = planningState, viewModel = planningVm, dateKey = java.time.LocalDate.now().toString())
-        }
-        "tomorrow" -> Column {
-            RowTabs(screen, onTab = { screen = it })
-            PlanningScreen(state = planningState, viewModel = planningVm, dateKey = java.time.LocalDate.now().plusDays(1).toString())
-        }
-        "limits" -> Column {
-            RowTabs(screen, onTab = { screen = it })
-            LimitsScreen(state = limitsState, viewModel = limitsVm)
-            LaunchedEffect(Unit) { limitsVm.load() }
-        }
-        "earnings" -> Column {
-            RowTabs(screen, onTab = { screen = it })
-            EarningsScreen(state = earningsState, viewModel = earningsVm)
-            LaunchedEffect(Unit) { earningsVm.load() }
-        }
-        "learning" -> Column {
-            RowTabs(screen, onTab = { screen = it })
-            LearningScreen(state = learningState, viewModel = learningVm)
-            LaunchedEffect(Unit) { learningVm.load() }
-        }
-        "report" -> Column {
-            RowTabs(screen, onTab = { screen = it })
-            WeeklyReportScreen(state = weeklyState)
-            LaunchedEffect(Unit) { weeklyVm.load() }
-        }
-        "settings" -> Column {
-            RowTabs(screen, onTab = { screen = it })
-            SettingsScreen(onExportCsv = { exportLauncher.launch("dayledger.csv") }, onBackup = { })
-        }
+    }
     }
 }
 
