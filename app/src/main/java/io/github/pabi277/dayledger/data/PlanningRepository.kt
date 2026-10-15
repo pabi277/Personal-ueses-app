@@ -56,4 +56,11 @@ class PlanningRepository(private val context: Context) {
     suspend fun tomorrowKey(): String = LocalDate.now().plusDays(1).toString()
 
     suspend fun todayKey(): String = LocalDate.now().toString()
+
+    suspend fun shiftDay(dateKey: String, minutes: Int) {
+        val blocks = blockDao.forDate(dateKey)
+        for (b in blocks) {
+            blockDao.upsert(b.copy(startMin = b.startMin + minutes, endMin = b.endMin + minutes))
+        }
+    }
 }

@@ -43,6 +43,8 @@ fun PlanningScreen(state: PlanningUiState, viewModel: PlanningViewModel, dateKey
             }
             Spacer(Modifier.height(12.dp))
             AddBlockForm(onAdd = { s, e, title -> viewModel.addBlock(s, e, title) })
+            Spacer(Modifier.height(8.dp))
+            Button(onClick = { viewModel.shiftDay(15) }) { Text("Shift rest of day +15m") }
             Spacer(Modifier.height(12.dp))
             Text("Blocks", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(4.dp))

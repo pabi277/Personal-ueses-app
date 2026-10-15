@@ -53,6 +53,13 @@ class PlanningViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun shiftDay(minutes: Int) {
+        viewModelScope.launch {
+            repo.shiftDay(_state.value.dateKey, minutes)
+            load(_state.value.dateKey)
+        }
+    }
+
     fun deleteBlock(id: Long) {
         viewModelScope.launch {
             repo.deleteBlock(id)
