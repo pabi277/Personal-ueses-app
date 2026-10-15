@@ -29,7 +29,7 @@ class BlockScreenActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val pkg = intent.getStringExtra("package") ?: ""
         setContent {
-            MaterialTheme {
+            io.github.pabi277.dayledger.ui.theme.DayLedgerTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     BlockScreen(
                         packageName = pkg,
