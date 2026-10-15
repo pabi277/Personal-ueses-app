@@ -17,6 +17,15 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import androidx.compose.runtime.Composable
@@ -43,7 +52,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme {
+            MaterialTheme(colorScheme = lightColorScheme()) {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     DayLedgerApp()
                 }
@@ -111,16 +120,24 @@ fun DayLedgerApp() {
         return
     }
 
-    val tabs = listOf("today" to "Today", "plan" to "Plan", "limits" to "Limits", "earnings" to "Earn", "learning" to "Learn", "report" to "Report", "notifications" to "Notify", "settings" to "Settings", "categories" to "Cats")
+    val tabs = listOf(
+        "today" to ("Today" to Icons.Default.Home),
+        "plan" to ("Plan" to Icons.Default.List),
+        "limits" to ("Limits" to Icons.Default.Lock),
+        "earnings" to ("Earn" to Icons.Default.TrendingUp),
+        "more" to ("More" to Icons.Default.MoreHoriz)
+    )
     Scaffold(
         bottomBar = {
             NavigationBar {
-                tabs.forEach { (key, label) ->
+                tabs.forEach { (key, pair) ->
+                    val label = pair.first
+                    val icon = pair.second
                     NavigationBarItem(
                         selected = screen == key,
                         onClick = { screen = key },
                         label = { Text(label) },
-                        icon = { Text(label.take(1)) }
+                        icon = { Icon(icon, contentDescription = label) }
                     )
                 }
             }
@@ -151,6 +168,10 @@ fun DayLedgerApp() {
                 WeeklyReportScreen(state = weeklyState)
                 LaunchedEffect(Unit) { weeklyVm.load() }
             }
+            "more" -> MoreScreen(
+                onOpen = { screen = it },
+                items = listOf("categories" to "Categories", "notifications" to "Notifications", "learning" to "Learning", "report" to "Report", "settings" to "Settings", "tomorrow" to "Tomorrow")
+            )
             "settings" -> SettingsScreen(onExportCsv = { exportLauncher.launch("dayledger.csv") }, onBackup = { })
         }
     }
@@ -169,5 +190,20 @@ fun RowTabs(current: String, onTab: (String) -> Unit) {
         Button(onClick = { onTab("learning") }) { Text("Learn") }
         Button(onClick = { onTab("report") }) { Text("Report") }
         Button(onClick = { onTab("settings") }) { Text("Settings") }
+    }
+}
+
+@Composable
+fun MoreScreen(onOpen: (String) -> Unit, items: List<Pair<String, String>>) {
+    androidx.compose.foundation.layout.Column(
+        modifier = androidx.compose.ui.Modifier.padding(16.dp),
+        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
+    ) {
+        androidx.compose.material3.Text("More", style = androidx.compose.material3.MaterialTheme.typography.headlineMedium)
+        items.forEach { (key, label) ->
+            androidx.compose.material3.Button(onClick = { onOpen(key) }) {
+                androidx.compose.material3.Text(label)
+            }
+        }
     }
 }
