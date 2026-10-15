@@ -61,36 +61,19 @@
 
 ## State (update at every phase end)
 
-- **Phase: none executed yet — the plan was revised, and stage 2 still waits on the
-  owner's approval.** The plan chat (PLAN.md stage 1) ran on 2026-10-15. At the exit
-  gate the owner answered: plan → **REVISE**; repo → authorized **public + MIT**
-  (recorded, **not acted on**); git author → his GitHub noreply for `pabi277`;
-  working name → **Day Ledger**; package → **`io.github.pabi277.dayledger`**.
-- **The revision arrived the same day** and reshaped the app: personal use only ·
-  college student · earns ~₹12.5 per offerwall app install via ProRewards / OfferPro
-  / coin-earn games · must learn something every day · wants per-app usage insight,
-  sweet customizable notifications, a home-screen widget readable without opening
-  the app, customizable block durations, and a Tomorrow plan. The full spec is now
-  **`docs/REQUIREMENTS.md`** (v0.2 draft), and `docs/ROADMAP.md`, `rule.md`,
-  `README.md` and `docs/DECISIONS.md` were rewritten around it. **No repository,
-  branch, commit or app code has been created.**
-- CI run: none yet · APK: none yet.
+- **Phase 0 ✅ — Bootstrap + hello** (2026-10-15). Snapshot + plan docs + MIT
+  LICENSE + Gradle/AGP skeleton + CI green; APK opens on a "Day Ledger" hello
+  screen. See `docs/phases/00-bootstrap-hello.md`.
+- CI run: 38748908795 green · APK: `app-progress-apk` (9.2 MB) shows the hello
+  screen.
 - Decisions digest: **personal use only, publishing cancelled** · English-only
-  (`en`, `en-IN`) · **no ads, no ad SDK** (the earlier "paid upfront" answer is moot
-  with no listing) · 4-week budget, **law 3 kept, no waiver**, covering phases 0–4 ·
-  **MIT** · public repo authorized but **not created** · git author = the owner's
-  GitHub noreply · per-app usage tracking is **in** (owner-directed reversal of the
-  earlier "no sensitive permissions" agent decision) → see `docs/DECISIONS.md`.
-  **Never re-ask any of these.**
-- Next: **phase 0 — Bootstrap + hello** — 0.1 freeze `templates/` + `knowledge/`
-  from the pinned SHA with the README provenance line · 0.2 commit the plan docs
-  (incl. `docs/REQUIREMENTS.md`) + `rule.md` + `prompt.md` + MIT `LICENSE` ·
-  0.3 minimal Gradle/AGP skeleton (Kotlin, Compose, Room, targetSdk 36, minSdk 26)
-  with one hello screen and one unit test · 0.4 `ci-build.yml` with signing secrets
-  by **name** only and the `app-progress-apk` debug artifact on every push.
-  Then **phase 1 — usage insight**, which carries kill test **P0**: real per-app
-  time on the owner's own phone, within ~10% of the system's own number. **If P0
-  fails, no later phase is built until it passes.**
+  (`en`, `en-IN`) · **no ads, no ad SDK** · 4-week budget, **law 3 kept, no
+  waiver**, covering phases 0–4 · **MIT** · git author = the owner's GitHub
+  noreply · per-app usage tracking is **in**. **Never re-ask any of these.**
+- Next: **phase 1 — Usage insight** (R1–R7), carrying kill test P0: real
+  per-app foreground time on the owner's own phone, within ~10% of the system's
+  own number. If P0 fails, build nothing else until it passes.
+
 - Open risks / owner items: `docs/REQUIREMENTS.md` §12 lists six things only the
   owner can supply (his earning / waste / never-block app list, his real ceilings
   and floors, college timetable, notification tone + quiet hours, device make/model
