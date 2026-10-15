@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -30,27 +31,37 @@ fun minutesToTime(m: Int): String = "%02d:%02d".format(m / 60, m % 60)
 @Composable
 fun PlanningScreen(state: PlanningUiState, viewModel: PlanningViewModel, dateKey: String) {
     LaunchedEffect(dateKey) { viewModel.load(dateKey) }
-    LazyColumn(modifier = Modifier.padding(16.dp)) {
+    LazyColumn(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item { Text("Plan: ${state.dateKey}", style = MaterialTheme.typography.headlineMedium) }
         item {
-            Text("Plan: ${state.dateKey}", style = MaterialTheme.typography.headlineMedium)
-            Spacer(Modifier.height(8.dp))
-            Text("Templates", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(4.dp))
-            Row {
-                state.templates.forEach { t ->
-                    Button(onClick = { viewModel.applyTemplate(t.id) }) { Text(t.name) }
+            Card {
+                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Templates", style = MaterialTheme.typography.titleMedium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        state.templates.forEach { t ->
+                            Button(onClick = { viewModel.applyTemplate(t.id) }) { Text(t.name) }
+                        }
+                    }
+                    Button(onClick = { viewModel.shiftDay(15) }) { Text("Shift rest of day +15m") }
                 }
             }
-            Spacer(Modifier.height(12.dp))
-            AddBlockForm(onAdd = { s, e, title -> viewModel.addBlock(s, e, title) })
-            Spacer(Modifier.height(8.dp))
-            Button(onClick = { viewModel.shiftDay(15) }) { Text("Shift rest of day +15m") }
-            Spacer(Modifier.height(12.dp))
-            Text("Blocks", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(4.dp))
         }
+        item {
+            Card {
+                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Add block", style = MaterialTheme.typography.titleMedium)
+                    AddBlockForm(onAdd = { s, e, title -> viewModel.addBlock(s, e, title) })
+                }
+            }
+        }
+        item { Text("Blocks", style = MaterialTheme.typography.titleMedium) }
         items(state.blocks) { b ->
-            BlockRow(b, onDelete = { viewModel.deleteBlock(b.id) })
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("${minutesToTime(b.startMin)}–${minutesToTime(b.endMin)} ${b.title}")
+                    Button(onClick = { viewModel.deleteBlock(b.id) }) { Text("Delete") }
+                }
+            }
         }
     }
 }
@@ -60,9 +71,9 @@ fun AddBlockForm(onAdd: (Int, Int, String) -> Unit) {
     var title by remember { mutableStateOf("") }
     var start by remember { mutableStateOf("09:00") }
     var end by remember { mutableStateOf("10:00") }
-    Column {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Title") }, modifier = Modifier.fillMaxWidth())
-        Row {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(value = start, onValueChange = { start = it }, label = { Text("Start HH:mm") }, modifier = Modifier.weight(1f))
             OutlinedTextField(value = end, onValueChange = { end = it }, label = { Text("End HH:mm") }, modifier = Modifier.weight(1f))
         }
@@ -74,13 +85,5 @@ fun AddBlockForm(onAdd: (Int, Int, String) -> Unit) {
                 if (sm != null && em != null && em > sm) onAdd(sm, em, title.ifBlank { "Block" })
             }
         }) { Text("Add block") }
-    }
-}
-
-@Composable
-fun BlockRow(b: BlockEntity, onDelete: () -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text("${minutesToTime(b.startMin)}–${minutesToTime(b.endMin)} ${b.title}")
-        Button(onClick = onDelete) { Text("Delete") }
     }
 }
