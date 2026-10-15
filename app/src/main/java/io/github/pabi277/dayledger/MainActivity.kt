@@ -70,10 +70,11 @@ fun DayLedgerApp() {
 
     var screen by remember { mutableStateOf(if (state.hasUsagePermission) "today" else "onboarding") }
 
+    val context = androidx.compose.ui.platform.LocalContext.current
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
         if (uri != null) {
             try {
-                contentResolver.openOutputStream(uri)?.use { os ->
+                context.contentResolver.openOutputStream(uri)?.use { os ->
                     os.write("date,package,minutes\n".toByteArray())
                     // best-effort: write today's usage
                     os.write("today,placeholder,0\n".toByteArray())
