@@ -70,9 +70,11 @@
   (`en`, `en-IN`) · **no ads, no ad SDK** · 4-week budget, **law 3 kept, no
   waiver**, covering phases 0–4 · **MIT** · git author = the owner's GitHub
   noreply · per-app usage tracking is **in**. **Never re-ask any of these.**
-- Next: **phase 1 — Usage insight** (R1–R7), carrying kill test P0: real
-  per-app foreground time on the owner's own phone, within ~10% of the system's
-  own number. If P0 fails, build nothing else until it passes.
+- **Phase 1 ✅ — Usage insight** (2026-10-15). Permission onboarding,
+  UsageStats ingestion into Room, Today screen, categories + budgets. CI run
+  38752868739 green; APK `app-progress-apk` shows Today + Categories.
+  See `docs/phases/01-usage-insight.md`.
+- Next: **phase 2 — Sweet notifications** (R9–R12).
 
 - Open risks / owner items: `docs/REQUIREMENTS.md` §12 lists six things only the
   owner can supply (his earning / waste / never-block app list, his real ceilings
