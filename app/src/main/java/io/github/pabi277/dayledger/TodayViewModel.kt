@@ -8,6 +8,7 @@ import io.github.pabi277.dayledger.data.AppUsageEntity
 import io.github.pabi277.dayledger.data.CategoryEntity
 import io.github.pabi277.dayledger.data.HourlyUsageEntity
 import io.github.pabi277.dayledger.data.UsageRepository
+import io.github.pabi277.dayledger.notifications.NotificationRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -41,8 +42,33 @@ class TodayViewModel(app: Application) : AndroidViewModel(app) {
         _state.value = _state.value.copy(hasUsagePermission = repo.hasUsagePermission())
     }
 
+
+    private suspend fun fireWasteThresholdIfNeeded() {
+        try {
+            val nrepo = NotificationRepository(getApplication())
+            val rules = nrepo.rules()
+            val rule = rules.firstOrNull { it.id == "waste_threshold" } ?: return
+            val today = java.time.LocalDate.now().toString()
+            val wasteMins = _state.value.apps.filter {
+                _state.value.appInfo[it.packageName]?.category == "Social/Waste"
+            }.sumOf { it.foregroundMinutes }
+            val wasteBudget = _state.value.categories.firstOrNull { it.name == "Social/Waste" }?.budgetMin ?: 45
+            if (wasteMins > wasteBudget) {
+                val text = rule.templateText
+                    .replace("{waste}", wasteMins.toString())
+                    .replace("{total}", _state.value.totalMinutes.toString())
+                nrepo.fireIfAllowed(rule, text)
+            }
+        } catch (e: Exception) {
+            // ignore notification failures
+        }
+    }
+
     fun loadToday() {
-        viewModelScope.launch {
+        viewModelScope.launch { loadTodaySync() }
+    }
+
+    private suspend fun loadTodaySync() {
             _state.value = _state.value.copy(isLoading = true, error = null)
             try {
                 val today = LocalDate.now().toString()
@@ -65,7 +91,6 @@ class TodayViewModel(app: Application) : AndroidViewModel(app) {
             } catch (e: Exception) {
                 _state.value = _state.value.copy(isLoading = false, error = e.message)
             }
-        }
     }
 
     fun refresh() {
@@ -76,7 +101,10 @@ class TodayViewModel(app: Application) : AndroidViewModel(app) {
                     repo.ingestRecentDays(7)
                 }
                 refreshPermission()
-                loadToday()
+                loadTodaySync()
+                if (repo.hasUsagePermission()) {
+                    fireWasteThresholdIfNeeded()
+                }
             } catch (e: Exception) {
                 _state.value = _state.value.copy(isLoading = false, error = e.message)
             }

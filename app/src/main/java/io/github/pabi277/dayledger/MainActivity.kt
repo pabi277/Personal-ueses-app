@@ -27,6 +27,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.pabi277.dayledger.ui.CategoriesScreen
 import io.github.pabi277.dayledger.ui.OnboardingScreen
+import io.github.pabi277.dayledger.ui.NotificationsScreen
 import io.github.pabi277.dayledger.ui.TodayScreen
 
 class MainActivity : ComponentActivity() {
@@ -46,8 +47,10 @@ class MainActivity : ComponentActivity() {
 fun DayLedgerApp() {
     val todayVm: TodayViewModel = viewModel()
     val categoryVm: CategoryViewModel = viewModel()
+    val notificationVm: NotificationViewModel = viewModel()
     val state by todayVm.state.collectAsState()
     val catState by categoryVm.state.collectAsState()
+    val notifState by notificationVm.state.collectAsState()
 
     var screen by remember { mutableStateOf(if (state.hasUsagePermission) "today" else "onboarding") }
 
@@ -83,6 +86,10 @@ fun DayLedgerApp() {
             CategoriesScreen(state = catState, viewModel = categoryVm)
             LaunchedEffect(Unit) { categoryVm.load() }
         }
+        "notifications" -> Column {
+            RowTabs(screen, onTab = { screen = it })
+            NotificationsScreen(state = notifState, viewModel = notificationVm)
+        }
     }
 }
 
@@ -91,5 +98,6 @@ fun RowTabs(current: String, onTab: (String) -> Unit) {
     Row {
         Button(onClick = { onTab("today") }) { Text("Today") }
         Button(onClick = { onTab("categories") }) { Text("Categories") }
+        Button(onClick = { onTab("notifications") }) { Text("Notify") }
     }
 }

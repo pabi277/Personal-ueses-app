@@ -6,8 +6,16 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [AppUsageEntity::class, HourlyUsageEntity::class, AppInfoEntity::class, CategoryEntity::class],
-    version = 1,
+    entities = [
+        AppUsageEntity::class,
+        HourlyUsageEntity::class,
+        AppInfoEntity::class,
+        CategoryEntity::class,
+        SettingEntity::class,
+        NotificationRuleEntity::class,
+        NotificationLogEntity::class
+    ],
+    version = 2,
     exportSchema = false
 )
 abstract class DayLedgerDatabase : RoomDatabase() {
@@ -15,6 +23,9 @@ abstract class DayLedgerDatabase : RoomDatabase() {
     abstract fun hourlyDao(): HourlyUsageDao
     abstract fun appInfoDao(): AppInfoDao
     abstract fun categoryDao(): CategoryDao
+    abstract fun settingDao(): SettingDao
+    abstract fun notificationRuleDao(): NotificationRuleDao
+    abstract fun notificationLogDao(): NotificationLogDao
 
     companion object {
         @Volatile
@@ -26,7 +37,7 @@ abstract class DayLedgerDatabase : RoomDatabase() {
                     context.applicationContext,
                     DayLedgerDatabase::class.java,
                     "dayledger.db"
-                ).build().also { INSTANCE = it }
+                ).fallbackToDestructiveMigration().build().also { INSTANCE = it }
             }
     }
 }
