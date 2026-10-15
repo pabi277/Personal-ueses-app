@@ -74,7 +74,9 @@
   UsageStats ingestion into Room, Today screen, categories + budgets. CI run
   38752868739 green; APK `app-progress-apk` shows Today + Categories.
   See `docs/phases/01-usage-insight.md`.
-- Next: **phase 2 — Sweet notifications** (R9–R12).
+- **Phase 2 ✅ — Sweet notifications** (2026-10-15). Engine, customization, thresholds, anti-nag. CI run 38753510344 green.
+  See `docs/phases/02-sweet-notifications.md`.
+- Next: **phase 3 — Widget + planning** (R13–R15, R20–R23).
 
 - Open risks / owner items: `docs/REQUIREMENTS.md` §12 lists six things only the
   owner can supply (his earning / waste / never-block app list, his real ceilings
