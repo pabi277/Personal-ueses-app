@@ -22,7 +22,6 @@ on:
 permissions:
   contents: read
   issues: write
-  issues: write
 
 concurrency:
   group: android-ci-${{ github.ref }}
