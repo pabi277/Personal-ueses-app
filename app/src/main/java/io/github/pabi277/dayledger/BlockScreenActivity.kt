@@ -2,6 +2,7 @@ package io.github.pabi277.dayledger
 
 import android.app.Activity
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import android.os.Bundle
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
