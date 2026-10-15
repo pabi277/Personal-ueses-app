@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -22,53 +23,49 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.pabi277.dayledger.CategoryUiState
 import io.github.pabi277.dayledger.CategoryViewModel
+import io.github.pabi277.dayledger.data.AppInfoEntity
 
 @Composable
 fun CategoriesScreen(state: CategoryUiState, viewModel: CategoryViewModel) {
-    LazyColumn(modifier = Modifier.padding(16.dp)) {
-        item {
-            Text("Categories & budgets", style = MaterialTheme.typography.headlineMedium)
-            Spacer(Modifier.height(12.dp))
-        }
+    LazyColumn(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item { Text("Categories & budgets", style = MaterialTheme.typography.headlineMedium) }
         items(state.categories) { c ->
             var budget by remember(c.id, c.budgetMin) { mutableStateOf(c.budgetMin.toString()) }
-            Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-                Text(c.name, style = MaterialTheme.typography.titleMedium)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = budget,
-                        onValueChange = { budget = it },
-                        label = { Text("Budget min") },
-                        modifier = Modifier.weight(1f)
-                    )
-                    Button(onClick = {
-                        val b = budget.toIntOrNull() ?: c.budgetMin
-                        val newKind = if (c.kind == "ceiling") "floor" else "ceiling"
-                        viewModel.updateBudget(c.id, b, newKind)
-                    }) { Text(c.kind) }
-                    Button(onClick = {
-                        val b = budget.toIntOrNull() ?: c.budgetMin
-                        viewModel.updateBudget(c.id, b, c.kind)
-                    }) { Text("Save") }
+            Card {
+                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(c.name, style = MaterialTheme.typography.titleMedium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(value = budget, onValueChange = { budget = it }, label = { Text("Budget (min)") }, modifier = Modifier.weight(1f))
+                        Button(onClick = {
+                            val b = budget.toIntOrNull() ?: c.budgetMin
+                            val newKind = if (c.kind == "ceiling") "floor" else "ceiling"
+                            viewModel.updateBudget(c.id, b, newKind)
+                        }) { Text(c.kind) }
+                        Button(onClick = {
+                            val b = budget.toIntOrNull() ?: c.budgetMin
+                            viewModel.updateBudget(c.id, b, c.kind)
+                        }) { Text("Save") }
+                    }
                 }
             }
         }
-        item {
-            Spacer(Modifier.height(16.dp))
-            Text("Assign apps", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(8.dp))
-        }
+        item { Text("Assign apps", style = MaterialTheme.typography.titleMedium) }
         items(state.apps) { app ->
-            Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                Text(app.label, style = MaterialTheme.typography.bodyMedium)
-                Text(app.packageName, style = MaterialTheme.typography.bodySmall)
-                Text("Category: ${app.category}", style = MaterialTheme.typography.bodySmall)
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    state.categories.forEach { c ->
-                        Button(onClick = { viewModel.assignApp(app.packageName, c.name) }) {
-                            Text(c.name.take(6))
-                        }
-                    }
+            AppCategoryCard(app, state, viewModel)
+        }
+    }
+}
+
+@Composable
+fun AppCategoryCard(app: AppInfoEntity, state: CategoryUiState, viewModel: CategoryViewModel) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(app.label, style = MaterialTheme.typography.bodyLarge)
+            Text(app.packageName, style = MaterialTheme.typography.bodySmall)
+            Text("Category: ${app.category}", style = MaterialTheme.typography.bodySmall)
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                state.categories.forEach { c ->
+                    Button(onClick = { viewModel.assignApp(app.packageName, c.name) }) { Text(c.name.take(8)) }
                 }
             }
         }
