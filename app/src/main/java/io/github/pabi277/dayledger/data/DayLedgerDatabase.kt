@@ -11,11 +11,15 @@ import androidx.room.RoomDatabase
         HourlyUsageEntity::class,
         AppInfoEntity::class,
         CategoryEntity::class,
+        BlockEntity::class,
+        DayPlanEntity::class,
+        TemplateEntity::class,
+        TemplateItemEntity::class,
         SettingEntity::class,
         NotificationRuleEntity::class,
         NotificationLogEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class DayLedgerDatabase : RoomDatabase() {
@@ -26,6 +30,9 @@ abstract class DayLedgerDatabase : RoomDatabase() {
     abstract fun settingDao(): SettingDao
     abstract fun notificationRuleDao(): NotificationRuleDao
     abstract fun notificationLogDao(): NotificationLogDao
+    abstract fun blockDao(): BlockDao
+    abstract fun dayPlanDao(): DayPlanDao
+    abstract fun templateDao(): TemplateDao
 
     companion object {
         @Volatile

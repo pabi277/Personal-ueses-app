@@ -28,6 +28,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.pabi277.dayledger.ui.CategoriesScreen
 import io.github.pabi277.dayledger.ui.OnboardingScreen
 import io.github.pabi277.dayledger.ui.NotificationsScreen
+import io.github.pabi277.dayledger.ui.PlanningScreen
 import io.github.pabi277.dayledger.ui.TodayScreen
 
 class MainActivity : ComponentActivity() {
@@ -48,9 +49,11 @@ fun DayLedgerApp() {
     val todayVm: TodayViewModel = viewModel()
     val categoryVm: CategoryViewModel = viewModel()
     val notificationVm: NotificationViewModel = viewModel()
+    val planningVm: PlanningViewModel = viewModel()
     val state by todayVm.state.collectAsState()
     val catState by categoryVm.state.collectAsState()
     val notifState by notificationVm.state.collectAsState()
+    val planningState by planningVm.state.collectAsState()
 
     var screen by remember { mutableStateOf(if (state.hasUsagePermission) "today" else "onboarding") }
 
@@ -90,6 +93,14 @@ fun DayLedgerApp() {
             RowTabs(screen, onTab = { screen = it })
             NotificationsScreen(state = notifState, viewModel = notificationVm)
         }
+        "plan" -> Column {
+            RowTabs(screen, onTab = { screen = it })
+            PlanningScreen(state = planningState, viewModel = planningVm, dateKey = java.time.LocalDate.now().toString())
+        }
+        "tomorrow" -> Column {
+            RowTabs(screen, onTab = { screen = it })
+            PlanningScreen(state = planningState, viewModel = planningVm, dateKey = java.time.LocalDate.now().plusDays(1).toString())
+        }
     }
 }
 
@@ -99,5 +110,7 @@ fun RowTabs(current: String, onTab: (String) -> Unit) {
         Button(onClick = { onTab("today") }) { Text("Today") }
         Button(onClick = { onTab("categories") }) { Text("Categories") }
         Button(onClick = { onTab("notifications") }) { Text("Notify") }
+        Button(onClick = { onTab("plan") }) { Text("Plan") }
+        Button(onClick = { onTab("tomorrow") }) { Text("Tomorrow") }
     }
 }
