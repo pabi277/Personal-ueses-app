@@ -202,12 +202,14 @@ fun RowTabs(current: String, onTab: (String) -> Unit) {
 fun MoreScreen(onOpen: (String) -> Unit, items: List<Pair<String, String>>) {
     androidx.compose.foundation.layout.Column(
         modifier = androidx.compose.ui.Modifier.padding(16.dp),
-        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
+        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)
     ) {
-        androidx.compose.material3.Text("More", style = androidx.compose.material3.MaterialTheme.typography.headlineMedium)
-        items.forEach { (key, label) ->
-            androidx.compose.material3.Button(onClick = { onOpen(key) }) {
-                androidx.compose.material3.Text(label)
+        io.github.pabi277.dayledger.ui.components.ScreenTitle("More")
+        io.github.pabi277.dayledger.ui.components.AppCard {
+            items.forEach { (key, label) ->
+                androidx.compose.material3.Button(onClick = { onOpen(key) }, modifier = androidx.compose.ui.Modifier.fillMaxWidth()) {
+                    androidx.compose.material3.Text(label)
+                }
             }
         }
     }

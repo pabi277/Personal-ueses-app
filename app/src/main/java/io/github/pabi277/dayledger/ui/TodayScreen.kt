@@ -14,8 +14,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -27,6 +25,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.pabi277.dayledger.TodayUiState
 import io.github.pabi277.dayledger.data.AppUsageEntity
+import io.github.pabi277.dayledger.ui.components.AppCard
+import io.github.pabi277.dayledger.ui.components.EmptyState
+import io.github.pabi277.dayledger.ui.components.KeyValueRow
+import io.github.pabi277.dayledger.ui.components.ScreenTitle
+import io.github.pabi277.dayledger.ui.components.SectionTitle
 
 fun formatMinutes(m: Int): String {
     val h = m / 60
@@ -36,53 +39,64 @@ fun formatMinutes(m: Int): String {
 
 @Composable
 fun TodayScreen(state: TodayUiState, onRefresh: () -> Unit) {
-    LazyColumn(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    LazyColumn(
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item { ScreenTitle("Today") }
         item {
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
-                Column(Modifier.padding(20.dp)) {
-                    Text("Today", style = MaterialTheme.typography.titleMedium)
-                    Text(formatMinutes(state.totalMinutes), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
-                    Text("device-reported foreground time · as of ${state.asOf}", style = MaterialTheme.typography.bodySmall)
+            AppCard(title = "Device usage") {
+                Text(
+                    text = formatMinutes(state.totalMinutes),
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = "Foreground time · as of ${state.asOf}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Button(onClick = onRefresh, enabled = !state.isLoading) { Text("Refresh") }
+                    if (state.isLoading) CircularProgressIndicator(modifier = Modifier.size(24.dp))
                 }
+                state.error?.let { Text("Error: $it", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
             }
         }
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onRefresh, enabled = !state.isLoading) { Text("Refresh") }
-                if (state.isLoading) CircularProgressIndicator(modifier = Modifier.size(24.dp))
+            AppCard(title = "Hourly pattern") {
+                HourlyStrip(state.hourly)
+                Text(
+                    text = "Each bar is one hour of the day.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-            state.error?.let { Text("Error: $it", color = Color.Red) }
         }
+        item { SectionTitle("Categories") }
         item {
-            Text("Hourly (device-reported)", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(8.dp))
-            HourlyStrip(state.hourly)
-        }
-        item {
-            Text("Categories", style = MaterialTheme.typography.titleMedium)
-        }
-        item {
-            Card {
-                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    state.categories.forEach { c ->
-                        val mins = state.apps.filter { state.appInfo[it.packageName]?.category == c.name }
-                            .sumOf { it.foregroundMinutes }
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Box(Modifier.size(10.dp).background(Color(c.color), CircleShape))
-                                Text(c.name)
-                            }
-                            Text("${formatMinutes(mins)} / ${c.budgetMin}m")
+            AppCard {
+                if (state.categories.isEmpty()) {
+                    EmptyState("No categories yet. Add them in More → Categories.")
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        state.categories.forEach { c ->
+                            val mins = state.apps.filter { state.appInfo[it.packageName]?.category == c.name }
+                                .sumOf { it.foregroundMinutes }
+                            KeyValueRow(c.name, "${formatMinutes(mins)} / ${c.budgetMin}m")
                         }
                     }
                 }
             }
         }
-        item {
-            Text("Apps", style = MaterialTheme.typography.titleMedium)
-        }
-        items(state.apps) { u ->
-            AppRow(u, state.appInfo[u.packageName]?.category ?: "Unclassified")
+        item { SectionTitle("Apps") }
+        if (state.apps.isEmpty()) {
+            item { EmptyState("No usage data for today yet.") }
+        } else {
+            items(state.apps) { u ->
+                AppRow(u, state.appInfo[u.packageName]?.category ?: "Unclassified")
+            }
         }
     }
 }
@@ -90,30 +104,28 @@ fun TodayScreen(state: TodayUiState, onRefresh: () -> Unit) {
 @Composable
 fun HourlyStrip(hours: List<Int>) {
     val max = (hours.maxOrNull() ?: 1).coerceAtLeast(1)
-    Card {
-        Row(Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-            hours.forEach { m ->
-                val intensity = m.toFloat() / max.toFloat()
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(32.dp)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f + 0.85f * intensity))
-                )
-            }
+    Row(Modifier.fillMaxWidth().height(40.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+        hours.forEach { m ->
+            val intensity = m.toFloat() / max.toFloat()
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(32.dp)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f + 0.85f * intensity), MaterialTheme.shapes.small)
+            )
         }
     }
 }
 
 @Composable
 fun AppRow(u: AppUsageEntity, category: String) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+    AppCard {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(u.packageName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                 Text(category, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Text(formatMinutes(u.foregroundMinutes), fontWeight = FontWeight.SemiBold)
+            Text(formatMinutes(u.foregroundMinutes), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
         }
     }
 }
