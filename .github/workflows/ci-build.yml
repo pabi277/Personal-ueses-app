@@ -56,12 +56,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh issue create --repo pabi277/Personal-ueses-app --title "CI build failure" --body "$(tail -n 150 /tmp/build.log)" || true
-      - name: Report failure
-        if: failure()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh issue create --repo pabi277/Personal-ueses-app --title "CI build failure" --body "$(tail -n 150 /tmp/build.log)" || true
       - name: Upload progress APK (the downloadable result of this phase)
         uses: actions/upload-artifact@v4
         with:
