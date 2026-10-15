@@ -82,7 +82,9 @@
   See `docs/phases/04-limits-blocking.md`.
 - **Phase 5 ✅ — Earnings + learning** (2026-10-15). Earning log, ₹/hour, learning streak. CI run 38755944663 green.
   See `docs/phases/05-earnings-learning.md`.
-- Next: **phase 6 — Review + durability** (R6, R24, R29–R31, R33).
+- **Phase 6 ✅ — Review + durability** (2026-10-15). Weekly report, shift-my-day, CSV export, settings. CI run 38756961555 green.
+  See `docs/phases/06-review-durability.md`.
+- Next: run kill tests P0–P3 on the owner's device.
 
 - Open risks / owner items: `docs/REQUIREMENTS.md` §12 lists six things only the
   owner can supply (his earning / waste / never-block app list, his real ceilings
