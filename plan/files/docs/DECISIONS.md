@@ -67,6 +67,26 @@
   notification cap respected every day. **P0 gates all later phases.** Never
   rewritten after results.
 
+### Merge authorization (owner, 2026-10-15)
+
+- 2026-10-15 — **Merge to `main`?** — **YES, explicitly commanded** ("Ok merge it
+  to main"), executed as a **fast-forward** of `main` from `16c6ad3` to the plan
+  commit `c29fefc16c7508edc64c10450ee41c9d79c5c1a7` in THIS repository
+  (`pabi277/Personal-ueses-app`). No pull request was created, because the command
+  was to merge, not to open a PR. The session branch is unchanged and remains the
+  working branch.
+- 2026-10-15 — **What this merge does NOT authorize.** It merges the *plan files*
+  only. The plan itself is still **unapproved** (gate item 1 = "revise", followed
+  by the owner's rescoping to personal use), so **the Day Ledger app repository
+  was not created** and no app code, `LICENSE`, playbook snapshot or CI exists. The
+  recorded repo authorization (public + MIT), git author identity and
+  name/package stay in force for the moment the owner approves.
+- 2026-10-15 — **Starting prompt delivered in chat, not as a branch file** — the
+  owner asked for the app's starting prompt to be written in the conversation
+  rather than added to the branch. `plan/files/prompt.md` remains the future app
+  repo's continuation prompt; the chat text is the stage-2 kickoff for the new
+  repository.
+
 ### Exit gate (batch B, asked 2026-10-15) — answers
 
 - 2026-10-15 — **Plan: approve / revise / hold?** — **REVISE.** The owner chose
