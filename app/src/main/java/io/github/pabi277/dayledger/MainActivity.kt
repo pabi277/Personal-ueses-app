@@ -27,6 +27,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.pabi277.dayledger.ui.CategoriesScreen
 import io.github.pabi277.dayledger.ui.OnboardingScreen
+import io.github.pabi277.dayledger.ui.LimitsScreen
 import io.github.pabi277.dayledger.ui.NotificationsScreen
 import io.github.pabi277.dayledger.ui.PlanningScreen
 import io.github.pabi277.dayledger.ui.TodayScreen
@@ -50,10 +51,12 @@ fun DayLedgerApp() {
     val categoryVm: CategoryViewModel = viewModel()
     val notificationVm: NotificationViewModel = viewModel()
     val planningVm: PlanningViewModel = viewModel()
+    val limitsVm: LimitsViewModel = viewModel()
     val state by todayVm.state.collectAsState()
     val catState by categoryVm.state.collectAsState()
     val notifState by notificationVm.state.collectAsState()
     val planningState by planningVm.state.collectAsState()
+    val limitsState by limitsVm.state.collectAsState()
 
     var screen by remember { mutableStateOf(if (state.hasUsagePermission) "today" else "onboarding") }
 
@@ -101,6 +104,11 @@ fun DayLedgerApp() {
             RowTabs(screen, onTab = { screen = it })
             PlanningScreen(state = planningState, viewModel = planningVm, dateKey = java.time.LocalDate.now().plusDays(1).toString())
         }
+        "limits" -> Column {
+            RowTabs(screen, onTab = { screen = it })
+            LimitsScreen(state = limitsState, viewModel = limitsVm)
+            LaunchedEffect(Unit) { limitsVm.load() }
+        }
     }
 }
 
@@ -112,5 +120,6 @@ fun RowTabs(current: String, onTab: (String) -> Unit) {
         Button(onClick = { onTab("notifications") }) { Text("Notify") }
         Button(onClick = { onTab("plan") }) { Text("Plan") }
         Button(onClick = { onTab("tomorrow") }) { Text("Tomorrow") }
+        Button(onClick = { onTab("limits") }) { Text("Limits") }
     }
 }
