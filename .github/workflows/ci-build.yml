@@ -135,11 +135,26 @@ jobs:
           if [[ -s "$OUT" ]]; then
             FINGERPRINT=$(awk '/SHA-256 digest: /{print; exit}' "$OUT" || true)
           fi
+          SHORT="unknown"
           if [[ -n "$FINGERPRINT" ]]; then
             echo "::notice title=APK signer SHA-256::${FINGERPRINT} (run $GITHUB_RUN_ID, commit ${GITHUB_SHA:0:7})"
+            SHORT=$(printf '%s' "$FINGERPRINT" | sed -E 's/.*digest:[[:space:]]*//' | tr -d ' :' | cut -c1-24 || true)
+            [[ -n "$SHORT" ]] || SHORT="unknown"
           else
             echo "::warning::No SHA-256 certificate fingerprint found in the apksigner output."
           fi
+          # Artifact NAMES are readable through the API, so the fingerprint in a
+          # name lets two runs be compared without logs or downloads. A
+          # certificate fingerprint is public information; a keystore value is not.
+          echo "SIGNER_SHA256_SHORT=$SHORT" >> "$GITHUB_ENV"
+          echo "APK signer SHA-256 (first 24 hex): $SHORT"
+      - name: Publish signing certificate evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: signer-${{ env.SIGNER_SHA256_SHORT }}
+          path: ${{ runner.temp }}/signing-certificate.txt
+          if-no-files-found: warn
+          retention-days: 90
       - name: Verify OS-backup exclusion in the merged manifest
         run: |
           set -uo pipefail
