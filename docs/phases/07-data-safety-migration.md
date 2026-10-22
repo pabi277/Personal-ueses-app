@@ -211,6 +211,42 @@ The rescued `.db` is a raw Room database, not the versioned backup Phase 7 will
 produce; it will be re-imported through the new restore path (or copied back with
 the same `run-as` route on a debug build) after the reinstall.
 
+### 6c. Termux variant (owner's environment: phone only, no PC)
+
+Same idea, different transport: **wireless debugging to the same phone**, so the
+`adb` client and the device are one handset. Needs **Android 11 or newer** (its
+`Wireless debugging` menu) and Termux installed from **F-Droid** (the Play build is
+outdated). On Android 10 or older this variant cannot work — a PC with a USB cable
+is then the only rescue route.
+
+```
+pkg update
+pkg install android-tools sqlite -y
+# Developer options > Wireless debugging > ON
+# tap "Pair device with pairing code" -> note the PAIRING port + code
+adb pair localhost:PAIRPORT          # type the 6-digit code when asked
+adb connect localhost:CONNECTPORT    # the port shown on the Wireless debugging screen
+adb devices                          # must list localhost:CONNECTPORT  device
+adb shell run-as io.github.pabi277.dayledger id     # must print uid=...  (proves debug build)
+adb shell am force-stop io.github.pabi277.dayledger # close the DB so the WAL is flushed
+mkdir -p ~/rescue
+adb exec-out run-as io.github.pabi277.dayledger cat databases/dayledger.db > ~/rescue/dayledger.db
+adb exec-out run-as io.github.pabi277.dayledger cat databases/dayledger.db-wal > ~/rescue/dayledger.db-wal 2>/dev/null || true
+sqlite3 ~/rescue/dayledger.db "PRAGMA user_version; .tables"
+```
+
+Expected: `user_version` = `5`, and the table list contains `app_usage`,
+`hourly_usage`, `app_info`, `categories`, `settings`, `notification_rules`,
+`notification_log`, `blocks`, `day_plans`, `templates`, `template_items`,
+`limit_events`, `earnings`, `learning`. Then keep a second copy and a hash
+(`sha256sum ~/rescue/dayledger.db`) as evidence. `run-as` printing
+`Package … is not debuggable` means the installed build is **not** a CI debug
+artifact — stop and report, because the rescue route then does not exist.
+
+Because this route uses the same `run-as` channel, the rescued file can also be
+written back after the reinstall (app stopped first, stale `-wal`/`-shm` removed),
+which avoids losing the history between the rescue and Phase 7's own restore path.
+
 ## 7. Gate status and the owner's next actions
 
 Gate answered: data **valuable**, signing identity **approved**. What is left is
