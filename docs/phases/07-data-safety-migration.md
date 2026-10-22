@@ -166,6 +166,31 @@ annotations are not retrievable through this API (`signer-unknown`), apksigner i
 on the runner image, `keytool -printcert -jarfile` had nothing to read because minSdk 26
 made AGP sign v2-only, and only Gradle's `signingReport` produced a real fingerprint.
 
+## 5b. Owner secrets present — first runs with the real keystore (2026-10-22)
+
+The owner added the four secret **names**. Three runs followed, and each one narrowed
+the fault without exposing a value:
+
+| Run | Commit | Result | What it proved |
+|---|---|---|---|
+| `39811357193` | `c4d50c6` | `:app:packageDebug` failed — `KeytoolException: Failed to read key dayledger-owner from store ...: null` | the keystore decoded, but Gradle could not unlock it |
+| `39811839022` | `db24580` | prepare step stopped at the new checks: **`ANDROID_KEYSTORE_PASSWORD` does not open the keystore** | the failure is the store password, not the alias |
+| `39812191114` | `b0f581e` | same, plus **`type=PKCS12 bytes=4389 base64chars=5852`** | the pasted base64 is **complete and valid** — not a truncation |
+
+Conclusion: `ANDROID_KEYSTORE_BASE64` is correct; `ANDROID_KEYSTORE_PASSWORD` is not
+the password that opens that store. Nothing is wrong with the workflow or Gradle: with
+a matching password the same pipeline signs, because `hasOwnerSigning` was already true.
+
+Because **no APK has been signed with this key yet**, regenerating the keystore now
+costs nothing — which makes "regenerate with a simple ASCII password" a safe option
+rather than a risk.
+
+Diagnostics added for this (value-free, and safe to keep permanently): decoded size and
+keystore type, store-password check, alias existence (names only when absent), and a
+throwaway `-certreq` to validate the key password. Each failure names the one secret to
+fix, and each is exposed as a run annotation because logs are not readable from every
+environment.
+
 ## 6. Gate step 7 — data conflict, stated explicitly (⚠️ STOP condition met)
 
 The owner has now confirmed the installed data is **valuable — do not lose it**.
