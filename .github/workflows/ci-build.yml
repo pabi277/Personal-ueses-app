@@ -73,11 +73,43 @@ jobs:
             fi
           done
           KEYSTORE_PATH="$RUNNER_TEMP/owner-sideload.jks"
-          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
-          test -s "$KEYSTORE_PATH"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH" 2>/dev/null || true
+          if [[ ! -s "$KEYSTORE_PATH" ]]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 did not decode to a file. Re-paste the one-line output of: base64 -w0 dayledger-owner.jks"
+            exit 1
+          fi
           chmod 600 "$KEYSTORE_PATH"
+
+          # Diagnose the keystore without printing any secret value: type/magic,
+          # whether the store password opens it, whether the alias exists, and
+          # whether the key password unlocks THAT alias.
+          MAGIC=$(head -c 4 "$KEYSTORE_PATH" | od -An -tx1 | tr -d ' \n')
+          case "$MAGIC" in
+            feedfeed) TYPE="JKS" ;;
+            3082*|3081*) TYPE="PKCS12" ;;
+            *) TYPE="unknown(magic $MAGIC)" ;;
+          esac
+          echo "keystore: ${#ANDROID_KEYSTORE_BASE64} base64 chars, $(wc -c < "$KEYSTORE_PATH") bytes, type $TYPE"
+
+          if ! keytool -list -keystore "$KEYSTORE_PATH" -storepass "$ANDROID_KEYSTORE_PASSWORD" > "$RUNNER_TEMP/kt.txt" 2>"$RUNNER_TEMP/kt.err"; then
+            echo "::error::ANDROID_KEYSTORE_PASSWORD does not open the keystore (or the file is corrupt). Fix the secret, nothing else."
+            sed -E 's/password[^,]*/password ***/g' "$RUNNER_TEMP/kt.err" | head -n 5
+            exit 1
+          fi
+          if ! grep -Fq "$ANDROID_KEY_ALIAS" "$RUNNER_TEMP/kt.txt"; then
+            echo "::error::ANDROID_KEY_ALIAS is not an alias inside this keystore. The aliases it contains (names only):"
+            grep -E "^[^ ].*," "$RUNNER_TEMP/kt.txt" | sed -E 's/,.*//' | sed 's/^/  - /' || true
+            exit 1
+          fi
+          if ! keytool -certreq -keystore "$KEYSTORE_PATH" -storepass "$ANDROID_KEYSTORE_PASSWORD" \
+                 -alias "$ANDROID_KEY_ALIAS" -keypass "$ANDROID_KEY_PASSWORD" -file "$RUNNER_TEMP/req.csr" >/dev/null 2>"$RUNNER_TEMP/kt2.err"; then
+            echo "::error::ANDROID_KEY_PASSWORD does not unlock ANDROID_KEY_ALIAS. If you pressed Enter when creating the key, the key password equals the store password; otherwise use the key password you typed."
+            head -n 3 "$RUNNER_TEMP/kt2.err" | sed -E 's/password[^,]*/password ***/g' || true
+            exit 1
+          fi
+          rm -f "$RUNNER_TEMP/kt.txt" "$RUNNER_TEMP/kt.err" "$RUNNER_TEMP/kt2.err" "$RUNNER_TEMP/req.csr"
+          echo "Owner signing key verified: store password ok, alias found, key password ok."
           echo "ANDROID_KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
-          echo "Owner signing key restored for this run."
       - name: Run unit tests and build debug APK
         run: |
           chmod +x ./gradlew
