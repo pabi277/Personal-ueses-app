@@ -109,15 +109,13 @@ jobs:
           set -uo pipefail
           APK=$(ls app/build/outputs/apk/debug/*.apk 2>/dev/null | head -n 1 || true)
           OUT="$RUNNER_TEMP/signing-certificate.txt"
-          # Find apksigner wherever the SDK actually lives on the runner.
-          APKSIGNER=""
-          for dir in $(ls -d "${ANDROID_HOME:-}"/*/build-tools/* "${ANDROID_HOME:-}"/build-tools/* "${ANDROID_SDK_ROOT:-}"/*/build-tools/* "${ANDROID_SDK_ROOT:-}"/build-tools/* 2>/dev/null | sort -V -r); do
-            if [[ -x "$dir/apksigner" ]]; then APKSIGNER="$dir/apksigner"; break; fi
-          done
-          if [[ -z "$APKSIGNER" ]]; then
-            APKSIGNER=$(find "${ANDROID_HOME:-/nonexistent}" "${ANDROID_SDK_ROOT:-/nonexistent}" /usr/local/lib/android/sdk -name apksigner -type f 2>/dev/null | head -n 1 || true)
+          if [[ -z "$APK" ]]; then
+            echo "::error::No debug APK found to inspect."
+            exit 1
           fi
-          echo "apksigner: ${APKSIGNER:-not found}"
+          # apksigner if the SDK exposes it, otherwise keytool from the JDK (which
+          # always exists after setup-java and can read a v1-signed APK).
+          APKSIGNER=$(find /usr/local/lib/android /opt/android-sdk "${ANDROID_HOME:-/nonexistent}" "${ANDROID_SDK_ROOT:-/nonexistent}" -maxdepth 6 -name apksigner -type f 2>/dev/null | sort -V -r | head -n 1 || true)
           {
             echo "apk: $(basename "$APK")"
             echo "workflow run: $GITHUB_RUN_ID"
@@ -127,34 +125,24 @@ jobs:
             else
               echo "signing mode: throwaway debug key (owner secrets absent)"
             fi
-            if [[ -n "$APKSIGNER" && -x "$APKSIGNER" ]]; then
-              "$APKSIGNER" verify --print-certs "$APK" 2>&1 | grep -Ei "signer #1 certificate (DN|SHA-256)" || true
+            if [[ -n "$APKSIGNER" ]]; then
+              echo "tool: $APKSIGNER"
+              "$APKSIGNER" verify --print-certs "$APK" 2>&1 | grep -Ei "signer #1 certificate" || true
             else
-              echo "::warning::apksigner not found; certificate fingerprint not recorded."
+              echo "tool: keytool -printcert -jarfile"
+              keytool -printcert -jarfile "$APK" 2>&1 | tail -n 25 || true
             fi
           } | tee "$OUT"
-          # A certificate fingerprint is public information; a keystore value is not.
-          echo "SIGNING_CERT_FILE=$OUT" >> "$GITHUB_ENV"
-          # Publish the public fingerprint as a run annotation so two runs can be
-          # compared from the API (artifact and log downloads are not available in
-          # every environment). This is a certificate fingerprint, not a secret.
-          # GitHub runs this with `bash -e`, so the capture must never abort the job.
-          FINGERPRINT=""
-          if [[ -s "$OUT" ]]; then
-            FINGERPRINT=$(awk '/SHA-256 digest: /{print; exit}' "$OUT" || true)
-          fi
-          SHORT="unknown"
-          if [[ -n "$FINGERPRINT" ]]; then
-            echo "::notice title=APK signer SHA-256::${FINGERPRINT} (run $GITHUB_RUN_ID, commit ${GITHUB_SHA:0:7})"
-            SHORT=$(printf '%s' "$FINGERPRINT" | sed -E 's/.*digest:[[:space:]]*//' | tr -d ' :' | cut -c1-24 || true)
-            [[ -n "$SHORT" ]] || SHORT="unknown"
+          FINGERPRINT=$(awk '/SHA-256 digest:/{print; exit} /^[[:space:]]*SHA256:/{print; exit}' "$OUT" || true)
+          SHORT=$(printf '%s' "$FINGERPRINT" | sed -E 's/.*(digest:|SHA256:)//' | tr -cd '0-9A-Fa-f' | cut -c1-24 || true)
+          [[ -n "$SHORT" ]] || SHORT="unknown"
+          if [[ "$SHORT" == "unknown" ]]; then
+            echo "::warning::No certificate fingerprint could be extracted; see signing-certificate.txt"
           else
-            echo "::warning::No SHA-256 certificate fingerprint found in the apksigner output."
+            echo "::notice title=APK signer SHA-256::${FINGERPRINT} (run $GITHUB_RUN_ID, commit ${GITHUB_SHA:0:7})"
           fi
-          # Artifact NAMES are readable through the API, so the fingerprint in a
-          # name lets two runs be compared without logs or downloads. A
-          # certificate fingerprint is public information; a keystore value is not.
           echo "SIGNER_SHA256_SHORT=$SHORT" >> "$GITHUB_ENV"
+          echo "SIGNING_CERT_FILE=$OUT" >> "$GITHUB_ENV"
           echo "APK signer SHA-256 (first 24 hex): $SHORT"
       - name: Publish signing certificate evidence
         uses: actions/upload-artifact@v4
@@ -263,34 +251,24 @@ jobs:
           set -uo pipefail
           APK=$(ls app/build/outputs/apk/release/*.apk 2>/dev/null | head -n 1 || true)
           OUT="$RUNNER_TEMP/signing-certificate.txt"
-          # Find apksigner wherever the SDK actually lives on the runner.
-          APKSIGNER=""
-          for dir in $(ls -d "${ANDROID_HOME:-}"/*/build-tools/* "${ANDROID_HOME:-}"/build-tools/* "${ANDROID_SDK_ROOT:-}"/*/build-tools/* "${ANDROID_SDK_ROOT:-}"/build-tools/* 2>/dev/null | sort -V -r); do
-            if [[ -x "$dir/apksigner" ]]; then APKSIGNER="$dir/apksigner"; break; fi
-          done
-          if [[ -z "$APKSIGNER" ]]; then
-            APKSIGNER=$(find "${ANDROID_HOME:-/nonexistent}" "${ANDROID_SDK_ROOT:-/nonexistent}" /usr/local/lib/android/sdk -name apksigner -type f 2>/dev/null | head -n 1 || true)
+          echo "signing mode: owner keystore" | tee "$OUT"
+          if [[ -z "$APK" ]]; then
+            echo "::error::No release APK found to inspect (was it signed?)."
+            exit 1
           fi
-          echo "apksigner: ${APKSIGNER:-not found}"
+          APKSIGNER=$(find /usr/local/lib/android /opt/android-sdk "${ANDROID_HOME:-/nonexistent}" "${ANDROID_SDK_ROOT:-/nonexistent}" -maxdepth 6 -name apksigner -type f 2>/dev/null | sort -V -r | head -n 1 || true)
           {
-            echo "apk: $(basename "$APK")"
-            echo "workflow run: $GITHUB_RUN_ID"
-            echo "commit: $GITHUB_SHA"
-            echo "signing mode: owner keystore"
-            if [[ -n "$APKSIGNER" && -x "$APKSIGNER" ]]; then
-              "$APKSIGNER" verify --print-certs "$APK" 2>&1 | grep -Ei "signer #1 certificate (DN|SHA-256)" || true
+            if [[ -n "$APKSIGNER" ]]; then
+              "$APKSIGNER" verify --print-certs "$APK" 2>&1 | grep -Ei "signer #1 certificate" || true
             else
-              echo "::warning::apksigner not found; certificate fingerprint not recorded."
+              keytool -printcert -jarfile "$APK" 2>&1 | tail -n 25 || true
             fi
-          } | tee "$OUT"
-          FINGERPRINT=""
-          if [[ -s "$OUT" ]]; then
-            FINGERPRINT=$(awk '/SHA-256 digest: /{print; exit}' "$OUT" || true)
-          fi
+          } | tee -a "$OUT"
+          FINGERPRINT=$(awk '/SHA-256 digest:/{print; exit} /^[[:space:]]*SHA256:/{print; exit}' "$OUT" || true)
           if [[ -n "$FINGERPRINT" ]]; then
             echo "::notice title=Release signer SHA-256::${FINGERPRINT} (run $GITHUB_RUN_ID, commit ${GITHUB_SHA:0:7})"
           else
-            echo "::warning::No SHA-256 certificate fingerprint found in the apksigner output."
+            echo "::warning::No release certificate fingerprint could be extracted."
           fi
       - name: Upload signed release artifacts
         uses: actions/upload-artifact@v4
