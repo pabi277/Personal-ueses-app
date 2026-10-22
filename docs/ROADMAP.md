@@ -19,8 +19,9 @@ Bootstrapped from AppFlow @ c8856022ca57cdf23ae78b9491481543db89438d on 2026-10-
 >
 > The earlier four-week budget has not been waived or extended. Display-name,
 > repository visibility/rename, detailed UI choice, reminder defaults and Android
-> OS-backup policy remain owner gates. The DL IDs refer to the attached handoff and
-> still need to be added to `docs/REQUIREMENTS.md` before their implementation.
+> OS-backup policy remain owner gates. The DL IDs refer to the sanitized reference
+> [`docs/reference/Daily-Logger-Handoff-for-New-Chat.md`](reference/Daily-Logger-Handoff-for-New-Chat.md)
+> and still need to be added to `docs/REQUIREMENTS.md` before implementation.
 
 | # | Phase (parts) | Done means | Status |
 |---|---|---|---|

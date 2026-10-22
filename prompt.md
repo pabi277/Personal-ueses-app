@@ -21,9 +21,10 @@
 - Invariants remain: one user, offline, English-only, no account/backend/ads/
   analytics, no Play Store path, no new permissions without a gate. Starter content
   and tests must be generic/fictional; never commit the owner’s timetable or routine.
-- `docs/REQUIREMENTS.md` R1–R34 remains the current checked-in spec. DL1–DL28 from
-  the handoff still need to be incorporated before implementation; do not treat
-  roadmap references alone as authorization.
+- `docs/REQUIREMENTS.md` R1–R34 remains the current checked-in spec. DL1–DL28 are
+  summarized in the sanitized [`docs/reference/Daily-Logger-Handoff-for-New-Chat.md`](docs/reference/Daily-Logger-Handoff-for-New-Chat.md)
+  and still need to be incorporated before implementation; roadmap references
+  alone are not authorization.
 - The owner asked that the **full device-validation phase be last**. See
   `docs/ROADMAP.md` Phase 15. The existing P0 pre-feature gate remains mandatory
   before Phase 8; the order change does not waive P0 or migration safety.
