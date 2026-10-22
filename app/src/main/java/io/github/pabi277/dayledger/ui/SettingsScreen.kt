@@ -15,19 +15,38 @@ import io.github.pabi277.dayledger.ui.components.AppCard
 import io.github.pabi277.dayledger.ui.components.ScreenTitle
 
 @Composable
-fun SettingsScreen(onExportCsv: () -> Unit, onBackup: () -> Unit) {
+fun SettingsScreen(
+    onExportCsv: () -> Unit,
+    onBackup: () -> Unit,
+    onRestore: () -> Unit = {},
+    status: String = ""
+) {
     Column(
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         ScreenTitle("Settings")
         AppCard(title = "Data") {
-            Text("Export your usage data or create a local backup.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Button(onClick = onExportCsv) { Text("Export CSV") }
-            OutlinedButton(onClick = onBackup) { Text("Backup (JSON)") }
+            Text(
+                "Backup writes every table and setting to one file you pick. Restore reads it back; " +
+                    "a backup from a newer app version is refused rather than half-applied.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Button(onClick = onBackup) { Text("Back up everything") }
+            OutlinedButton(onClick = onRestore) { Text("Restore from backup") }
+            OutlinedButton(onClick = onExportCsv) { Text("Export CSV") }
+            if (status.isNotEmpty()) {
+                Text(status, style = MaterialTheme.typography.bodySmall)
+            }
         }
         AppCard(title = "About") {
-            Text("Day Ledger · personal use only. Data stays on this device.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                "Day Ledger · personal use only. Data stays on this device: Android cloud backup " +
+                    "and device transfer are switched off for this app, so the file you export here is the only backup.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

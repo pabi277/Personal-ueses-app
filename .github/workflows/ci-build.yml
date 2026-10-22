@@ -107,6 +107,41 @@ jobs:
           } | tee "$OUT"
           # A certificate fingerprint is public information; a keystore value is not.
           echo "SIGNING_CERT_FILE=$OUT" >> "$GITHUB_ENV"
+      - name: Verify OS-backup exclusion in the merged manifest
+        run: |
+          set -uo pipefail
+          MANIFEST=$(find app/build/intermediates -path "*merged*" -name AndroidManifest.xml | head -n 1)
+          if [[ -z "$MANIFEST" ]]; then
+            echo "::error::Could not find a merged manifest to verify."
+            exit 1
+          fi
+          echo "Verifying $MANIFEST"
+          grep -o 'android:allowBackup="[^"]*"' "$MANIFEST" || true
+          grep -o 'android:fullBackupContent="[^"]*"' "$MANIFEST" || true
+          grep -o 'android:dataExtractionRules="[^"]*"' "$MANIFEST" || true
+          fail=0
+          grep -q 'android:allowBackup="false"' "$MANIFEST" || { echo "::error::allowBackup is not false in the merged manifest"; fail=1; }
+          grep -q 'android:fullBackupContent="@xml/backup_rules"' "$MANIFEST" || { echo "::error::fullBackupContent is not wired to @xml/backup_rules"; fail=1; }
+          grep -q 'android:dataExtractionRules="@xml/data_extraction_rules"' "$MANIFEST" || { echo "::error::dataExtractionRules is not wired to @xml/data_extraction_rules"; fail=1; }
+          APK=$(ls app/build/outputs/apk/debug/*.apk | head -n 1)
+          AAPT2=$(ls -d "$ANDROID_HOME"/build-tools/* 2>/dev/null | sort -V | tail -n 1)
+          if [[ -n "$AAPT2" && -x "$AAPT2/aapt2" ]]; then
+            echo "--- backup flags as packaged in the APK ---"
+            "$AAPT2" dump xmltree --file AndroidManifest.xml "$APK" 2>/dev/null | grep -iE "allowBackup|fullBackupContent|dataExtractionRules" || true
+          fi
+          exit $fail
+      - name: Record Room schema export
+        run: |
+          set -uo pipefail
+          ls -l app/schemas/*/ || true
+          SCHEMA=$(find app/schemas -name "5.json" | head -n 1)
+          if [[ -z "$SCHEMA" ]]; then
+            echo "::error::Room did not export the v5 schema"
+            exit 1
+          fi
+          echo "Exported: $SCHEMA"
+          echo "identityHash in the exported schema:"
+          grep -o '"identityHash": "[^"]*"' "$SCHEMA" || true
       - name: Upload progress APK (the downloadable result of this phase)
         uses: actions/upload-artifact@v4
         with:
@@ -116,6 +151,13 @@ jobs:
             ${{ runner.temp }}/signing-certificate.txt
           if-no-files-found: error
           retention-days: 30
+      - name: Upload Room schema export
+        uses: actions/upload-artifact@v4
+        with:
+          name: room-schema
+          path: app/schemas
+          if-no-files-found: error
+          retention-days: 90
 
   signed-release:
     name: Signed release AAB and APK

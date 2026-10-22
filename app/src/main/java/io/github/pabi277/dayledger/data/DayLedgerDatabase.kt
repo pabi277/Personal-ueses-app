@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import io.github.pabi277.dayledger.data.migrations.DatabaseMigrations
 
 @Database(
     entities = [
@@ -22,8 +23,8 @@ import androidx.room.RoomDatabase
         NotificationRuleEntity::class,
         NotificationLogEntity::class
     ],
-    version = 5,
-    exportSchema = false
+    version = DatabaseMigrations.CURRENT_VERSION,
+    exportSchema = true
 )
 abstract class DayLedgerDatabase : RoomDatabase() {
     abstract fun usageDao(): AppUsageDao
@@ -50,7 +51,14 @@ abstract class DayLedgerDatabase : RoomDatabase() {
                     context.applicationContext,
                     DayLedgerDatabase::class.java,
                     "dayledger.db"
-                ).fallbackToDestructiveMigration().build().also { INSTANCE = it }
+                )
+                    // Explicit, non-destructive v1 → v2 → v3 → v4 → v5 steps.
+                    // There is deliberately NO fallbackToDestructiveMigration():
+                    // an unknown schema must fail loudly instead of silently
+                    // deleting the owner's history.
+                    .addMigrations(*DatabaseMigrations.ALL)
+                    .build()
+                    .also { INSTANCE = it }
             }
     }
 }

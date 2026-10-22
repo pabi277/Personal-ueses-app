@@ -9,7 +9,19 @@
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <!--
+      Android OS backup and device transfer are switched off for this app: the
+      Room database and every app-private file are excluded from cloud backup and
+      phone-to-phone transfer. The only backup is the versioned file the owner
+      explicitly exports through the app's SAF flow (Settings -> Back up everything).
+      allowBackup=false covers all API levels; fullBackupContent covers legacy
+      (API 23-30) Auto Backup; dataExtractionRules covers API 31+ both for cloud
+      backup and device transfer.
+    -->
     <application
+        android:allowBackup="false"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:label="@string/app_name"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
         <activity

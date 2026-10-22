@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SPDX-License-Identifier: MIT
+
+  Legacy Android Auto Backup rules (API 23–30), used when android:allowBackup is
+  true. This app sets allowBackup="false", so the platform must not back it up at
+  all; these excludes are the second, explicit layer so that a future manifest edit
+  cannot quietly start backing up app-private data.
+
+  Everything the app owns is excluded: the Room database, its -wal/-shm files, the
+  backup files the owner exports into app-private storage, and any preference file.
+-->
+<full-backup-content>
+    <exclude domain="root" path="." />
+    <exclude domain="file" path="." />
+    <exclude domain="database" path="." />
+    <exclude domain="sharedpref" path="." />
+    <exclude domain="external" path="." />
+</full-backup-content>
