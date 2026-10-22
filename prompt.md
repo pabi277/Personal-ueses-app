@@ -3,33 +3,37 @@
 # Day Ledger — continuation prompt
 
 > **Self-contained handoff. Paste this file as the first message of the next chat,
-> then give one command** (e.g. `start phase 0` or a bug report).
+> then give one command** (e.g. answer the remaining plan gates or report a bug).
 > This repo is self-contained: `rule.md` holds the full rules, `docs/` the plan,
 > the spec and the decisions, THIS FILE the living state. AppFlow is provenance
 > only — nothing here depends on it. Update this file at the end of every phase, in
 > the same commit as the phase record.
 
-## Identity (fixed)
+## Identity and product direction
 
-- App: **Day Ledger** (working name) · package: **`io.github.pabi277.dayledger`**
-  (permanent once published) · license: **MIT** (owner, 2026-10-15)
-- What it is: a **personal-use, single-user, offline, English-only**
-  time-efficiency app for the owner's own day — per-app usage insight
-  (device-reported), sweet customizable notifications, a home-screen widget
-  readable **without opening the app**, planned 24-hour blocks with a **Tomorrow
-  plan**, app limits with **customizable block durations**, an offerwall earnings
-  log (~₹12.50 per install) with real ₹/hour attribution, and a daily learning
-  streak. No account, no backend, no ads, no analytics, no store listing.
-- **The spec is `docs/REQUIREMENTS.md`** (the owner's own words, his day-in-the-life,
-  and R1–R34 with acceptance tests). Read it before proposing any feature; nothing
-  is built that is not in it.
-- Official Play title: Not set — and not applicable: publishing was cancelled by
-  the owner on 2026-10-15.
-- Provenance: bootstrapped from AppFlow @
+- Technical/current label: **Day Ledger** · proposed visible label **Daily Logger**
+  (owner confirmation pending) · package/database identity:
+  **`io.github.pabi277.dayledger`** (must remain unchanged) · license: MIT.
+- The owner’s 2026-10-22 direction is to evolve this same personal app into a
+  whole-life Daily Logger / external brain: optional domains, one-tap completion
+  with optional details, and persistent-until-action reminders with quiet hours,
+  caps, pause controls and kind copy. No separate checklist app.
+- Invariants remain: one user, offline, English-only, no account/backend/ads/
+  analytics, no Play Store path, no new permissions without a gate. Starter content
+  and tests must be generic/fictional; never commit the owner’s timetable or routine.
+- `docs/REQUIREMENTS.md` R1–R34 remains the current checked-in spec. DL1–DL28 from
+  the handoff still need to be incorporated before implementation; do not treat
+  roadmap references alone as authorization.
+- The owner asked that the **full device-validation phase be last**. See
+  `docs/ROADMAP.md` Phase 15. The existing P0 pre-feature gate remains mandatory
+  before Phase 8; the order change does not waive P0 or migration safety.
+- Repository rename/visibility and the display-label choice are separate pending
+  gates. Do not change either without explicit approval.
+- Provenance: AppFlow @
   `c8856022ca57cdf23ae78b9491481543db89438d` (reference only — this repo is
   self-contained).
-- Git author: designated in `docs/DECISIONS.md` · session branch: arena/be850e43-personal-ueses-app ·
-  never push `main`.
+- Git author: designated in `docs/DECISIONS.md` · session branch: use the branch
+  assigned by Arena; never create/switch branches or push `main`.
 
 ## Rules digest (full rules: `./rule.md` in THIS repo — self-contained)
 
@@ -38,12 +42,13 @@
 - Never create/switch branches, push `main`, force-push, or `reset --hard`.
 - No PR, merge, release, publish or deploy without my explicit command in chat.
   Green CI is not authorization.
-- **Ask less, gate always** (`rule.md` §3): GATE items are asked once, in one
-  Summary batch. DECIDE-ONCE answers live in `docs/DECISIONS.md` and are **never
-  re-asked** — direction (personal-use time app), English-only, no ads, 4 weeks and
-  the core-first scope cut were all answered on 2026-10-15. The six owner-only
-  inputs in `docs/REQUIREMENTS.md` §12 are **not** a question batch: use the
-  documented default, log it as reversible, let the owner correct it any time.
+- **Ask less, gate always** (`rule.md` §3): GATE items are asked once in a
+  Summary batch. The 2026-10-15 language, no-ads, personal-use and package
+  decisions remain closed. The 2026-10-22 Daily Logger direction and full-device-
+  phase-last ordering are recorded in `docs/DECISIONS.md`; do not re-ask them.
+  Display label, repository visibility/rename, UI choice, expanded time budget and
+  use-gate criteria, reminder defaults, and Android OS-backup policy remain pending.
+  Owner-local routine details are entered on-device, not asked as a blocker.
 - Invariants that are easy to break by accident: the **fixed permission set**
   (`PACKAGE_USAGE_STATS`, `QUERY_ALL_PACKAGES`, `POST_NOTIFICATIONS`, exact alarms,
   boot, and Accessibility + overlay **for phase-4 blocking only**) — nothing else,
@@ -84,26 +89,34 @@
   See `docs/phases/05-earnings-learning.md`.
 - **Phase 6 ✅ — Review + durability** (2026-10-15). Weekly report, shift-my-day, CSV export, settings. CI run 38756961555 green.
   See `docs/phases/06-review-durability.md`.
-- Next: run kill tests P0–P3 on the owner's device.
+- The 2026-10-22 phase plan places the full device-validation phase last
+  (Phase 15). Phase 7 is data-safety/migration readiness; the existing P0
+  real-device usage check remains a hard pre-feature gate before Phase 8.
+- After the plan's remaining owner gates are answered, the next implementation
+  chat is Phase 7 only. Do not implement checklist features before its backup and
+  migration-safety acceptance is met.
+- The Phase 10 MVP use-gate is a separate 14-day trial before Phase 11; it does
+  not replace the original P0–P3 criteria.
+- Current-source audit: Phase 6's backup/restore claim is not demonstrated by the
+  tree (`MainActivity.kt` backup callback is empty and its CSV output is a
+  placeholder). Phase 7 must close this gap before any schema-changing phase.
 
-- Open risks / owner items: `docs/REQUIREMENTS.md` §12 lists six things only the
-  owner can supply (his earning / waste / never-block app list, his real ceilings
-  and floors, college timetable, notification tone + quiet hours, device make/model
-  + Android version, whether ₹12.50 is the only rate) — documented defaults are used
-  until he answers, each logged as reversible. Phase 4 (Accessibility + overlay
-  blocking) is the fragile one; its notification-only fallback is already recorded
-  in `docs/ROADMAP.md`. `docs/RESEARCH.md` stays on file: it is why in-app feature
-  blocking is out of scope and why every number is labelled device-reported.
+- Owner-local setup remains optional and on-device: enabled domains, timetable,
+  app lists, reminder windows and routines are not committed or asked as a blocking
+  chat questionnaire. The Phase 4 Accessibility path remains optional/fragile;
+  checklist use must work with it disabled. `docs/RESEARCH.md` remains the source
+  for why in-app feature blocking is out of scope and why automatic usage numbers
+  are labelled device-reported.
 
 ## How to continue
 
 1. Read `docs/REQUIREMENTS.md`, `docs/ROADMAP.md`, `docs/DECISIONS.md` and the
    latest `docs/phases/` record — trust the repo, not memory. Ask nothing that is
    already recorded.
-2. Implement **phase 0**, all four parts, evidence-first. Then one phase per chat,
-   in order, each ending in a sideloadable increment the owner can see on his own
-   phone.
-3. End with: CI green + the run's downloadable `app-progress-apk` artifact ·
-   `docs/phases/00-bootstrap-hello.md` (say what the APK shows) · roadmap row ✅ ·
-   this file updated · short report (run id, tip sha, APK, what is now visible) ·
-   stop at the merge gate.
+2. Do not start implementation until the remaining owner gates are answered.
+   Then implement **Phase 7 only** (data safety and migration foundation),
+   evidence-first. Keep full device validation at Phase 15 and preserve the P0
+   pre-feature gate before Phase 8.
+3. End each phase with CI green + the run's downloadable `app-progress-apk`, a
+   phase record describing what the APK shows, roadmap/prompt updates and a short
+   report — then stop at the merge gate. No PR or merge without an explicit command.

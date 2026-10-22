@@ -26,6 +26,27 @@
   wiring, store listing and release prep are sequenced after it** (phases 5–6),
   outside the four-week build clock. Owner selected the "4 weeks — ship core,
   defer monetization to the next phase" option.
+
+### Owner update (2026-10-22)
+
+- The owner directed that this **existing app** evolve into a personal Daily
+  Logger / external brain, not a separate checklist app. Whole-life domains must
+  be independently disable-able; completion is one-tap with optional detail;
+  reminders persist until an action, with quiet hours, caps, pause controls and
+  non-shaming copy. The app remains single-user, offline, English-only, with no
+  account/backend/ads/analytics; package `io.github.pabi277.dayledger` and database
+  identity stay fixed. Committed starter data must remain generic/fictional.
+- The proposed visible name **Daily Logger** is not yet approved; keep Day Ledger
+  as the current label until that gate is answered. Repository rename and
+  visibility are separate gates; no repository change is authorized here.
+- The owner asked for the comprehensive device-validation phase to be **last**.
+  The roadmap therefore puts the full device matrix in Phase 15 while retaining a
+  Phase 7 safety foundation and the existing P0 pre-feature gate before Phase 8.
+  This sequencing does not waive P0, migration safety or the pre-migration backup.
+- The owner authorized writing the phase plan only. This is **not** authorization
+  to implement Phase 7, change the app label, change repository visibility, or
+  waive the still-open plan choices.
+
 ### Plan revision (owner, 2026-10-15) — the gate answer "revise", now specified
 
 - 2026-10-15 — **Who is this app for?** — **The owner only.** His words: *"I want
@@ -232,19 +253,21 @@
   paise, local-date keys, append-only history, every aggregate recomputable from raw
   rows and unit-tested. Sketch only — no code in plan docs. Reversible.
 
-## Open (decide-once items not yet asked)
+## Open (current owner gates)
 
-- **None outstanding.** Both permitted batches have been used and answered on
-  2026-10-15: batch A (direction + languages + monetization + budget/scope) and
-  batch B (the exit gate). Nothing else will be asked.
-- ~~**Blocking, owner-side:** the revision list for the plan.~~ **Delivered
-  2026-10-15** and written up as `docs/REQUIREMENTS.md`; `docs/ROADMAP.md`,
-  `rule.md`, `prompt.md` and `README.md` were re-cut around it.
-- **Blocking now, owner-side:** (a) approval of the revised plan — the repo
-  authorization (public + MIT), the git author identity and the name/package are
-  already recorded and will be used the moment the plan is approved; (b) optional
-  but sharpening: the six inputs in `docs/REQUIREMENTS.md` §12, and any edit to
-  R1–R34 ("edit insight app" — the spec is his to rewrite).
+- The 2026-10-15 decision batches remain closed; do not re-ask those answers.
+  The 2026-10-22 product direction and phase ordering are recorded above.
+- The owner authorized writing the phase plan with the full device-validation phase
+  last. **Implementation is not authorized by that planning request.**
+- Still pending: visible app label; repository visibility/rename timing; final UI
+  direction; how the existing four-week budget applies to the expanded roadmap and
+  the 14-day use-gate criteria; reminder cadence/caps; and Android OS-backup policy.
+  These must be resolved before they are made permanent in the spec or implemented.
+- Owner-local timetable, wake/sleep times, enabled domains, app lists, health
+  routines and reminder windows are not blocking chat questions; use generic,
+  editable defaults and collect those locally in the app.
+- P0 remains a hard gate before Phase 8. No checklist schema change may ship before
+  the Phase 7 backup and migration-safety evidence is complete.
 
 ## Owner verification tasks (before any store submission)
 
