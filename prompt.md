@@ -125,11 +125,15 @@
   signing/install acceptance is met.
 - The Phase 10 MVP use-gate is a separate 14-day real-use trial before Phase 11;
   agree measurable criteria before that trial. It does not replace original P0–P3.
-- Current-source audit: Phase 6's backup/restore claim is not demonstrated by the
-  tree (`MainActivity.kt` backup callback is empty and its CSV output is a
-  placeholder). Room is v5 with `exportSchema = false` and destructive fallback;
-  Android OS-backup exclusion is not implemented. Phase 7 must close these gaps
-  before any checklist schema change.
+- Phase 7 closed the Phase 6 durability gap in code (2026-10-22): the Settings
+  backup writes a versioned JSON file covering every table, restore validates and
+  runs in one transaction, the CSV exports real rows, Room is v5 with
+  `exportSchema = true` and explicit `1→2→3→4→5` migrations and **no** destructive
+  fallback, and the manifest excludes all app-private data from OS backup and
+  device transfer. These are CI-proven; **device proof is still owed** — do not
+  describe them as verified on the owner's phone. Database version remains 5; any
+  later schema bump must add the next explicit migration and rerun the full
+  v1–v5 matrix before shipping.
 - Signing status (2026-10-22, Phase 7 gate): the gate failed on evidence — the
   progress APK was signed by an AGP-generated debug key recreated on every runner
   (no keystore restore, no `signingConfigs`), and `main` run `39771615912` failed
@@ -159,16 +163,20 @@
 1. Read `docs/REQUIREMENTS.md`, `docs/ROADMAP.md`, `docs/DECISIONS.md`,
    `docs/UI_DESIGN.md` and the latest `docs/phases/` record — trust the repo, not
    memory. Ask nothing that is already recorded.
-2. Phase 7 is **in progress but feature code has not started.** The signing gate
-   is answered (data valuable, identity approved) and the signing plumbing is
-   wired. Before Phase 7 parts 7.1–7.4 begin, the owner must: create the keystore
-   outside the repo, add the four secret **names**
+2. Phase 7 is **in progress**: parts **7.1–7.4 are implemented and CI-verified**
+   (run `39777555069`, 26 tests green — schema export, non-destructive
+   v1→v5 migrations, versioned SAF backup/restore, OS-backup exclusion), and
+   **nothing has been installed on the owner's phone**. Remaining, owner-only:
+   (a) create the keystore outside the repo and add the four secret **names**
    (`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`,
-   `ANDROID_KEY_PASSWORD`; values his alone), and complete the ADB `run-as`
-   database rescue in `docs/phases/07-data-safety-migration.md` §6b **before** any
-   owner-key APK is installed, because that first install needs one uninstall and
-   that data is valuable. Never ask for secret values. Keep the full device matrix
-   at Phase 15 and preserve P0 before Phase 8.
+   `ANDROID_KEY_PASSWORD`; values his alone, never asked for in chat);
+   (b) complete the database rescue (`docs/phases/07-data-safety-migration.md`
+   §6b/§6c — PC+USB or Termux wireless ADB, since the owner has one phone and no
+   second device); (c) one uninstall + install of an owner-key APK; then part 7.5
+   (update-over-install proof) and the device smoke check in §10 of that record.
+   The owner chose **option A**: build everything CI can prove, install nothing
+   until a rescue path exists. Keep the full device matrix at Phase 15 and
+   preserve P0 before Phase 8.
 3. End each implementation phase with CI green and its `app-progress-apk`; the
    owner installs it and records a short smoke check plus the phase-specific
    evidence in the phase record. Update roadmap/prompt and stop at the merge gate.

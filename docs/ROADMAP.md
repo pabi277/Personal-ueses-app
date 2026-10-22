@@ -62,20 +62,22 @@ Bootstrapped from AppFlow @ c8856022ca57cdf23ae78b9491481543db89438d on 2026-10-
 
 ### Phase 7 — Data safety and migration foundation (no checklist features)
 
-> 🚧 **Status: IN PROGRESS — signing gate answered, data rescue still open
-> (2026-10-22).** The gate was run first and failed: progress APKs were signed by
-> an AGP-generated debug key recreated on every runner (no `signingConfigs`, no
-> keystore restore), and the main release job still fails on the missing name
-> `ANDROID_KEYSTORE_BASE64` (run `39771615912`); no artifact fingerprint could be
-> inspected because artifact downloads are blocked here. The owner then answered
-> the gate — data **valuable**, one owner-controlled identity **approved** — so the
-> signing plumbing was wired (Gradle `owner` signing config used by **both** debug
-> and release, a runner keystore restore, and an `apksigner` SHA-256 fingerprint in
-> the log and artifact). That wiring proves nothing until the owner adds the four
-> secret **names** and two runs show the same fingerprint. Because the installed
-> data is valuable and the first owner-key install needs one uninstall, Phase 7
-> feature code (7.1–7.4) is deliberately held until the owner's ADB database rescue
-> is verified. Evidence, the rescue steps and the owner's setup plan are in
+> 🚧 **Status: IN PROGRESS — parts 7.1–7.4 implemented and CI-verified; 7.5 and
+> the Done gate wait on the owner's device (2026-10-22).** The signing gate was run
+> first and failed: progress APKs were signed by a per-runner throwaway debug key and
+> the release job was missing the name `ANDROID_KEYSTORE_BASE64`. The owner answered
+> the gate (data **valuable**, one owner-controlled identity **approved**), so the
+> signing plumbing is wired — one `owner` signing config used by **both** debug and
+> release, a runner keystore restore, and an `apksigner` SHA-256 fingerprint in the
+> log and artifact — and Phase 7's data-safety work was then built entirely in CI:
+> Room v5 schema export, explicit non-destructive `1→2→3→4→5` migrations (no version
+> bump, destructive fallback removed), versioned SAF backup/restore for every table
+> and setting, and `allowBackup="false"` plus legacy/API-31 extraction rules verified
+> in the merged manifest. Green run **`39777555069`**, 26 unit tests, artifacts
+> `app-progress-apk` and `room-schema`. **Nothing was installed on the owner's
+> phone.** Outstanding: the owner's signing secrets, the database rescue, the
+> one-time uninstall, and then the device smoke check and update-over-install proof
+> (part 7.5). Evidence and procedures:
 > [`docs/phases/07-data-safety-migration.md`](phases/07-data-safety-migration.md).
 
 #### Historical Room inventory (verified from Git history, 2026-10-22)

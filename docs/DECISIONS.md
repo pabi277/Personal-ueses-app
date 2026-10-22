@@ -178,6 +178,19 @@
 
 ## Agent decisions (reversible — object and they change)
 
+- 2026-10-22 — **Phase 7 data-safety implementation choices** (all reversible on
+  objection): (a) migrations stay **additive-only** — explicit `1→2→3→4→5` steps
+  that create tables and never rewrite a row, because the full git history shows
+  no column was ever renamed, retyped or dropped; (b) database version stays **5**
+  and `fallbackToDestructiveMigration()` is removed so an unknown schema fails
+  loudly instead of wiping history; (c) the backup file is **in-tree JSON**
+  (`formatVersion` 1 envelope + `schemaVersion`, app-id stamped) rather than a new
+  dependency, so the restore path is unit-testable on the JVM; (d) restore is
+  **transactional and refuses before deleting** anything when the file is from a
+  newer schema, another app, or cannot fill a required column; (e) OS backup is
+  excluded twice (`allowBackup=false` plus explicit per-domain rules) so a later
+  manifest edit cannot silently re-enable it.
+
 - 2026-10-15 — **Playbook pin** — the launcher's `<SHA>` placeholder arrived
   unreplaced, so the pin was resolved to AppFlow `main` tip
   `c8856022ca57cdf23ae78b9491481543db89438d` (2026-10-11) and every playbook

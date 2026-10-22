@@ -1,7 +1,8 @@
 # Phase 07 — Data safety and migration foundation
 
-- Status: 🚧 **IN PROGRESS — signing gate answered, data-rescue conflict still
-  open** · Date: 2026-10-22 · Branch: `arena/0276c412-personal-ueses-app`
+- Status: 🚧 **IN PROGRESS — parts 7.1–7.4 implemented and CI-verified; 7.5 and
+  the Done gate wait on the owner's device** · Date: 2026-10-22 ·
+  Branch: `arena/0276c412-personal-ueses-app`
 - Base: `main` @ `8070713` (merge commit of PR #11)
 - Round 1 (evidence only) wrote no code. Round 2 wires the owner-approved signing
   identity (§8) — the one change the gate authorised — and **still writes no Phase 7
@@ -390,32 +391,110 @@ right now is installable over the build already on the phone, because every one 
 them is signed by a *different* throwaway key. The next install the owner makes —
 whoever signs it — is the one that needs the §6b rescue first.
 
-## 9. Phase 7 work held back (nothing started)
+## 9. Round 3 — parts 7.1–7.4 implemented and verified in CI
 
-Room v5 schema export and fictional v1–v5 fixtures · explicit non-destructive
-v1/v2/v3/v4 → v5 migrations and removal of `fallbackToDestructiveMigration()`
-(`DayLedgerDatabase.kt:25–26, 53`) · complete versioned SAF backup/restore
-(replacing `MainActivity.kt:90–100, 180`) · `allowBackup="false"` plus legacy
-full-backup rules and API 31+ data-extraction rules (absent from
-`AndroidManifest.xml` today) · update-over-install proof on the stable signing
-path · the README AppFlow provenance line and the
-`docs/REQUIREMENTS.md` §7 link as a documentation ride-along.
+The owner chose option **A**: build everything that CI can prove, install nothing.
+No APK was installed and nothing on the phone was touched. The installed build and
+its data are exactly as they were.
 
-No checklist UI, no Daily Logger label change, no new permissions, no database
-version bump, no personal seed data.
+### 9.1 What shipped, part by part
+
+**7.1 — Schema baseline.** `exportSchema = true` with
+`room.schemaLocation = app/schemas` in `app/build.gradle.kts`; CI now fails if Room
+does not export `5.json`, prints its `identityHash`, and uploads it as the
+`room-schema` artifact. Fictional fixtures for v1–v5 live in the migration tests
+(`MigrationTest.seedV1/…/seedV5`) with representative keys, unicode labels, nulls
+and both `INTEGER`/`TEXT` shapes; no owner data is involved. Database version is
+still **5** and no checklist table exists.
+
+**7.2 — Versioned SAF backup/restore.** `backup/Json.kt` (in-tree writer/parser),
+`backup/BackupModel.kt`, `backup/BackupCodec.kt` (envelope: `formatVersion`,
+`schemaVersion`, app id, app version, timestamp, tables → columns → rows),
+`backup/RestorePlanner.kt` (pure accept/refuse logic), `backup/BackupService.kt`
+(enumerates `sqlite_master`, so every table — including ones added in later phases —
+is covered without a hand-maintained list; restore deletes and re-inserts inside one
+transaction). Settings now has **Back up everything** (create document) and
+**Restore from backup** (open document) with a visible result line, and the Phase 6
+placeholder CSV is replaced by the real stored usage rows.
+
+**7.3 — Non-destructive migrations.** `data/migrations/DatabaseMigrations.kt` holds
+the four explicit steps; `DayLedgerDatabase` registers them and **no longer calls**
+`fallbackToDestructiveMigration()`, so an unknown schema throws instead of wiping
+history. Every step creates tables only — the full git history proves no column was
+ever renamed, retyped or dropped, so no row is rewritten.
+
+**7.4 — Android OS backup exclusion.** `android:allowBackup="false"`,
+`android:fullBackupContent="@xml/backup_rules"` (legacy, API 23–30) and
+`android:dataExtractionRules="@xml/data_extraction_rules"` (API 31+, both
+`cloud-backup` and `device-transfer`), each excluding `root`, `file`, `database`,
+`sharedpref` and `external`. CI verifies the merged manifest and the packaged APK
+flags on every run.
+
+### 9.2 CI evidence (this is CI evidence, not device evidence)
+
+| Item | Value |
+|---|---|
+| Green run | `39777555069` · `Android CI` · branch `arena/0276c412-personal-ueses-app` |
+| Tip commit | `30cee09` |
+| Unit tests | 26 tests, all green: 7 migration, 9 backup codec, 9 restore planner, 1 scaffold |
+| Steps | build ✅ · signing certificate record ✅ · **OS-backup exclusion in merged manifest ✅** · **Room schema export ✅** · `app-progress-apk` upload ✅ · `room-schema` upload ✅ |
+| `app-progress-apk` | id `12425322526`, 18,280,337 bytes, `sha256:2f3d3793…39fd475` |
+| `room-schema` | id `12425352488`, 1,805 bytes, `sha256:aab9e1e6…48fd6d` (`5.json`) |
+| Signed release job | skipped (branch build; main only) |
+| Expected annotation | owner signing secrets still absent — the APK is throwaway-key signed |
+
+Two failed runs preceded it and are kept as evidence: `39776380281` (first attempt,
+schema-matrix assertion) and `39776972220` (same test after diagnostics were added).
+Both failed for the same reason: the **test expectation** said `notnull=0` for
+`INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL`, while SQLite correctly reports `1` —
+i.e. the migration DDL matched Room exactly and the expectation was wrong. Fixed in
+`30cee09`. Their auto-filed issues are **#12**, **#13** and **#14**; they stay open
+because closing issues needs the owner's command.
+
+### 9.3 What is proven, and what is not
+
+Proven by CI: every supported upgrade path (v1, v2, v3, v4 and v5 starts) reaches
+v5 with every source row intact; the migrated schema matches the v5 entity matrix
+column for column; no migration statement contains `DROP`/`DELETE`/`TRUNCATE`/
+`RENAME`; backups round-trip exactly through the codec (unicode, escaping, nulls,
+reals, empty database); malformed, foreign and newer files are refused with
+readable messages; the restore planner refuses before any delete.
+
+**Not proven, and deliberately not claimed:** that the app launches with the new
+Room setup on a real phone; that update-over-install works on the owner's device;
+that an exported file restores into a real install; that a newer-signature APK
+installs over the old one. Those are the owner's smoke check (§10).
+
+### 9.4 Known gap carried into the next round
+
+The generated `5.json` is uploaded by CI but its **checked-in copy is still
+missing** from the repository, because artifact downloads are blocked in this
+environment (see §4). Fetch the `room-schema` artifact from run `39777555069` and it
+can be committed as-is under
+`app/schemas/io.github.pabi277.dayledger.data.DayLedgerDatabase/5.json`; the
+schema-matrix test already pins the same column facts, so nothing is unverified
+meanwhile — only the canonical file is absent.
 
 ## 10. How this phase becomes Done
 
 Two evidence lines, kept separate so CI evidence and owner evidence can never be
-confused:
+confused.
 
-- **CI/test evidence (agent):** migration tests for v1–v4 → v5 and the 1→2→3→4→5
-  steps, fictional fixtures for every legacy table, backup/restore round-trip
-  tests, merged-manifest check of the backup attributes, green `Android CI` run
-  with `app-progress-apk`, and a certificate fingerprint printed for that APK.
-- **Owner-device evidence (owner, reported by him):** the Phase 7 APK installing
-  over the previously installed build without uninstalling, the app launching,
-  the data surviving the update, an exported SAF backup file restored in an
-  isolated install, and P0 observations with any exact error text.
+**CI/test evidence — ✅ collected (run `39777555069`):** every supported v1–v4 → v5
+upgrade non-destructive, schema matrix match, backup/restore round trip, refusal
+paths, merged-manifest OS-backup exclusion, `app-progress-apk` uploaded.
 
-Phase 7 is not Done while either line is missing or while this gate is open.
+**Owner-device evidence — ⬜ still outstanding.** All of it needs one install, which
+needs the one-time uninstall, which needs the database rescue first (§6b/§6c):
+
+1. A `dayledger-backup-*.json` file exported from Settings → *Back up everything*.
+2. That same file restored after a clear-data, with row counts unchanged.
+3. The app launching normally on the new Room configuration (no crash dialog).
+4. `app-progress-apk` installing **over** the installed build without uninstalling.
+5. P0 usage numbers still correct, with any exact error text if they are not.
+6. The certificate SHA-256 fingerprint printed by two separate runs being identical.
+
+Phase 7 is **not Done** while any of those is missing, and it is not Done while the
+signing secrets are absent. When the owner reports items 1–6, this record gains a
+"Round 4 — owner device evidence" section quoting his words, and only then does the
+roadmap row move to ✅.
