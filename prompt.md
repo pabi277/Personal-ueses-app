@@ -3,7 +3,8 @@
 # Day Ledger — continuation prompt
 
 > **Self-contained handoff. Paste this file as the first message of the next chat,
-> then give one command** (e.g. answer the remaining plan gates or report a bug).
+> then give one command** (e.g. start the separately authorized phase or report a
+> bug; do not re-ask the closed owner gates).
 > This repo is self-contained: `rule.md` holds the full rules, `docs/` the plan,
 > the spec and the decisions, THIS FILE the living state. AppFlow is provenance
 > only — nothing here depends on it. Update this file at the end of every phase, in
@@ -11,25 +12,47 @@
 
 ## Identity and product direction
 
-- Technical/current label: **Day Ledger** · proposed visible label **Daily Logger**
-  (owner confirmation pending) · package/database identity:
-  **`io.github.pabi277.dayledger`** (must remain unchanged) · license: MIT.
-- The owner’s 2026-10-22 direction is to evolve this same personal app into a
-  whole-life Daily Logger / external brain: optional domains, one-tap completion
-  with optional details, and persistent-until-action reminders with quiet hours,
-  caps, pause controls and kind copy. No separate checklist app.
+- **Current visible label:** Day Ledger. **Approved future visible label:** Daily
+  Logger, introduced with the Phase 8 checklist front door; the current APK is not
+  renamed. Package/database identity stays **`io.github.pabi277.dayledger`** and
+  license stays MIT.
+- Evolve this same app into the owner-approved Daily Logger / external brain, not
+  a separate checklist app. The approved UI hybrid is Today = Command Center
+  Checklist, Plan/Tomorrow = timeline, Focus = One Thing; primary navigation is
+  Today · Plan · Habits · Review · More. Usage is supporting Phone evidence, not
+  the Today hero. Existing Usage, Earn, Learn, Limits, Categories, Notifications
+  and Settings remain reachable.
+- Reminder defaults are approved and editable: Core every 20 minutes per
+  occurrence, max four sound/vibration fires per occurrence subject to a separate
+  daily Core cap, then silent ongoing/widget visibility; Standard initial +
+  one repeat after 45–60 minutes; Flexible one gentle reminder or digest. Quiet
+  hours are no-fire; global Pause preserves due state until resume; Less Often is
+  scoped; separate daily Core/general checklist caps do not reuse R12's usage cap.
+- Android OS cloud backup and device-to-device transfer must exclude the database
+  and all app-private data. The only backup is an explicitly user-exported SAF
+  file. Phase 7 must implement and verify the Android backup/data-extraction rules;
+  this is not the current build's behavior.
 - Invariants remain: one user, offline, English-only, no account/backend/ads/
-  analytics, no Play Store path, no new permissions without a gate. Starter content
-  and tests must be generic/fictional; never commit the owner’s timetable or routine.
-- `docs/REQUIREMENTS.md` R1–R34 remains the current checked-in spec. DL1–DL28 are
-  summarized in the sanitized [`docs/reference/Daily-Logger-Handoff-for-New-Chat.md`](docs/reference/Daily-Logger-Handoff-for-New-Chat.md)
-  and still need to be incorporated before implementation; roadmap references
-  alone are not authorization.
-- The owner asked that the **full device-validation phase be last**. See
-  `docs/ROADMAP.md` Phase 15. The existing P0 pre-feature gate remains mandatory
-  before Phase 8; the order change does not waive P0 or migration safety.
-- Repository rename/visibility and the display-label choice are separate pending
-  gates. Do not change either without explicit approval.
+  analytics, no Play Store path, no new permissions without a gate. Starter content,
+  examples and tests must be generic/fictional; never commit owner timetable,
+  routines, profile or financial details.
+- `docs/REQUIREMENTS.md` preserves R1–R34 and P0–P3 and now contains DL1–DL28 with
+  priorities, R-ID mappings and acceptance tests. Read it with the approved
+  [`docs/UI_DESIGN.md`](docs/UI_DESIGN.md) and `docs/ROADMAP.md` before work.
+- The repository remains **public** under its current name; no repository rename
+  is authorized. No fixed calendar deadline applies to proposed Phases 7–15; the
+  historical four-week statement applies only to Phases 0–4. MVP is Phases 7–10,
+  then a 14-day real-use gate before Phase 11. Work one owner-approved phase per
+  chat.
+- The full device matrix remains Phase 15. P0 still gates Phase 8. Every
+  implementation phase also requires an owner APK install and a short recorded
+  smoke check. This documentation closure does not start Phase 7.
+- Signing continuity remains **unknown**: progress artifacts for runs
+  `39766581703` and `39766005737` could not be downloaded in this environment;
+  the main signed-release attempt `38845505942` failed during signing-key setup
+  and no signed-release artifact was found. Do not promise update-over-install or
+  rotate signing until evidence is available; see the Phase 7 owner gate in the
+  roadmap. Secret names only; never copy values.
 - Provenance: AppFlow @
   `c8856022ca57cdf23ae78b9491481543db89438d` (reference only — this repo is
   self-contained).
@@ -45,11 +68,12 @@
   Green CI is not authorization.
 - **Ask less, gate always** (`rule.md` §3): GATE items are asked once in a
   Summary batch. The 2026-10-15 language, no-ads, personal-use and package
-  decisions remain closed. The 2026-10-22 Daily Logger direction and full-device-
-  phase-last ordering are recorded in `docs/DECISIONS.md`; do not re-ask them.
-  Display label, repository visibility/rename, UI choice, expanded time budget and
-  use-gate criteria, reminder defaults, and Android OS-backup policy remain pending.
-  Owner-local routine details are entered on-device, not asked as a blocker.
+  decisions remain closed. The 2026-10-22 label timing, UI, reminder defaults,
+  OS-backup exclusion, public repository/no-rename decision, no-fixed-deadline
+  scope and Phase 15 device ordering are answered in `docs/DECISIONS.md`; do not
+  re-ask them. Agree measurable criteria for the 14-day post-Phase-10 use gate
+  before that trial begins. Owner-local routine details are entered on-device, not
+  asked as a blocker.
 - Invariants that are easy to break by accident: the **fixed permission set**
   (`PACKAGE_USAGE_STATS`, `QUERY_ALL_PACKAGES`, `POST_NOTIFICATIONS`, exact alarms,
   boot, and Accessibility + overlay **for phase-4 blocking only**) — nothing else,
@@ -93,14 +117,24 @@
 - The 2026-10-22 phase plan places the full device-validation phase last
   (Phase 15). Phase 7 is data-safety/migration readiness; the existing P0
   real-device usage check remains a hard pre-feature gate before Phase 8.
-- After the plan's remaining owner gates are answered, the next implementation
-  chat is Phase 7 only. Do not implement checklist features before its backup and
-  migration-safety acceptance is met.
-- The Phase 10 MVP use-gate is a separate 14-day trial before Phase 11; it does
-  not replace the original P0–P3 criteria.
+- The 2026-10-22 product and delivery gates are closed. This documentation
+  closure is documentation-only and does **not** start Phase 7. After the docs
+  merge gate and separate owner authorization, work on Phase 7 only; do not
+  implement checklist features before its migration, backup and signing/install
+  acceptance is met.
+- The Phase 10 MVP use-gate is a separate 14-day real-use trial before Phase 11;
+  agree measurable criteria before that trial. It does not replace original P0–P3.
 - Current-source audit: Phase 6's backup/restore claim is not demonstrated by the
   tree (`MainActivity.kt` backup callback is empty and its CSV output is a
-  placeholder). Phase 7 must close this gap before any schema-changing phase.
+  placeholder). Room is v5 with `exportSchema = false` and destructive fallback;
+  Android OS-backup exclusion is not implemented. Phase 7 must close these gaps
+  before any checklist schema change.
+- Signing audit status (2026-10-22): progress artifact metadata for runs
+  `39766581703` and `39766005737` is available, but archive downloads were blocked
+  by the sandbox's outbound-host allowlist, so certificate fingerprints are
+  unknown. Main run `38845505942` failed at signing-key preparation; no accessible
+  main signed-release artifact was found. Do not claim signing stability. If it is
+  unknown or unstable in Phase 7, stop at the owner gate and use secret names only.
 
 - Owner-local setup remains optional and on-device: enabled domains, timetable,
   app lists, reminder windows and routines are not committed or asked as a blocking
@@ -111,13 +145,15 @@
 
 ## How to continue
 
-1. Read `docs/REQUIREMENTS.md`, `docs/ROADMAP.md`, `docs/DECISIONS.md` and the
-   latest `docs/phases/` record — trust the repo, not memory. Ask nothing that is
-   already recorded.
-2. Do not start implementation until the remaining owner gates are answered.
-   Then implement **Phase 7 only** (data safety and migration foundation),
-   evidence-first. Keep full device validation at Phase 15 and preserve the P0
-   pre-feature gate before Phase 8.
-3. End each phase with CI green + the run's downloadable `app-progress-apk`, a
-   phase record describing what the APK shows, roadmap/prompt updates and a short
-   report — then stop at the merge gate. No PR or merge without an explicit command.
+1. Read `docs/REQUIREMENTS.md`, `docs/ROADMAP.md`, `docs/DECISIONS.md`,
+   `docs/UI_DESIGN.md` and the latest `docs/phases/` record — trust the repo, not
+   memory. Ask nothing that is already recorded.
+2. This documentation-closure round must pass its PR review/merge gate first. Do
+   not start Phase 7 until the owner separately authorizes that phase. Then
+   implement **Phase 7 only** (data safety and migration foundation),
+   evidence-first. Keep the full device matrix at Phase 15 and preserve P0 before
+   Phase 8.
+3. End each implementation phase with CI green and its `app-progress-apk`; the
+   owner installs it and records a short smoke check plus the phase-specific
+   evidence in the phase record. Update roadmap/prompt and stop at the merge gate.
+   No PR or merge without an explicit command.

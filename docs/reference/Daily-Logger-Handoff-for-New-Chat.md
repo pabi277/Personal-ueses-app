@@ -4,7 +4,7 @@
 >
 > **Current phase-order authority:** `docs/ROADMAP.md` is current. The full device-validation phase is **Phase 15, last**. The earlier Phase 7 device-first sequence in the source handoff is superseded. The existing P0 pre-feature check and Phase 7 data-safety gate still apply.
 >
-> Read this alongside `rule.md`, `docs/REQUIREMENTS.md`, `docs/DECISIONS.md` and `prompt.md`. Trust verified current code and the latest owner decisions over this summary. This file does not authorize implementation or override an open owner gate.
+> Read this alongside `rule.md`, `docs/REQUIREMENTS.md`, `docs/DECISIONS.md` and `prompt.md`. Trust verified current code and the latest owner decisions over this summary. The product choices below are answered, not pending. This reference does not authorize Phase 7 implementation; the current closure is documentation-only.
 
 ## 1. Product direction and locked constraints
 
@@ -15,7 +15,8 @@
 - Preserve package/database identity `io.github.pabi277.dayledger`, MIT license, the fixed permission philosophy and the sideloaded CI `app-progress-apk` path. Do not add permissions without a gate.
 - Usage statistics are evidence, not proof of learning or completion. Never auto-complete a study or other item from foreground app usage.
 - Preserve earning-app and always-allowed protections. Checklist completion must never hold essential apps or the phone hostage.
-- Display label **Daily Logger** is proposed, not approved. Repository rename and visibility are separate owner gates; this file makes no change to either.
+- Visible label **Daily Logger** is approved for the Phase 8 checklist front door. Until then, the current APK label remains **Day Ledger**; package/database identity stays `io.github.pabi277.dayledger`.
+- The repository remains **public** under its current name. Do not rename it in this task. Keep all committed examples and fixtures generic and sanitized; do not restore personal profile, timetable, routine or financial details from an unsanitized source.
 
 ## 2. North star and effort targets
 
@@ -45,9 +46,11 @@ Possible optional domains include Study, Work/College, Build, Create, Home/Admin
 - **Evening:** ask for explicit leftover decisions, an optional one-line reflection and tomorrow's Top 3/template.
 - **Weekly:** review consistency, carryovers and linked records with one primary suggestion; let the owner shrink, pause or change routines without shame.
 
-## 5. Proposed requirement families (DL IDs)
+## 5. Requirement families (DL IDs)
 
-The IDs below summarize the source handoff and must be incorporated into `docs/REQUIREMENTS.md` with acceptance tests before implementation. They are not yet a substitute for the checked-in R1–R34 spec.
+DL1–DL28 are now incorporated into `docs/REQUIREMENTS.md` with priorities,
+related R-IDs where applicable and acceptance tests. They supplement, and do not
+replace or rewrite, the original R1–R34 and P0–P3 criteria.
 
 | IDs | Priority | Coverage |
 |---|---|---|
@@ -66,46 +69,108 @@ The IDs below summarize the source handoff and must be incorporated into `docs/R
 | DL25–DL27 | Must | Non-destructive migrations, complete local backup/restore, explicit OS-backup/privacy policy |
 | DL28 | Could | Evaluate optional local app lock only through a separate gate |
 
-## 6. Proposed UI direction
+## 6. Approved UI direction — hybrid A+B+C
 
-The source handoff recommends a hybrid, pending owner confirmation:
+The owner approved this direction on 2026-10-22; detailed layouts and states are
+in [`../UI_DESIGN.md`](../UI_DESIGN.md):
 
-- **Today — Command Center Checklist:** Now/Overdue, deadlines, time-window groups, Core/all progress, quick capture, Done/Minimum/Later and optional completion detail. Usage evidence belongs lower on the screen or in Review.
-- **Plan/Tomorrow — timeline:** blocks for *when*, checklist items for *what*, plus an Anytime lane, carryover inbox, overlap warnings and editable Top 3.
-- **Focus — one thing:** a mode launched from Today/widget/notification, with a timer and explicit completion controls; not the only home screen.
-- Suggested destinations: **Today · Plan · Habits · Review · More**. Keep existing usage, learning, earning, limits and settings reachable rather than silently deleting features.
-- Keep widget freshness visible with an “as of” time; do not promise continuous refresh. Use accessible touch targets, TalkBack labels, large-text layouts, calm copy and resource-backed strings.
+- **Today — Command Center Checklist:** Now/Overdue, deadlines, time-window
+groups, Core/all progress, Quick Capture and Done/Minimum/Later/Reschedule/Skip/
+Edit/Undo. Optional detail follows a tick and may be skipped. Usage belongs below
+the checklist as supporting **Phone evidence**.
+- **Plan/Tomorrow — timeline:** blocks describe *when*, checklist items describe
+*what*, with an Anytime lane, explicit carryover, overlap warnings and editable
+Top 3.
+- **Focus — One Thing:** optional mode launched from Today/widget/notification,
+with a timer and explicit completion controls; not the only home screen.
+- Primary navigation is **Today · Plan · Habits · Review · More**. Keep Usage, Earn,
+Learn, Limits, Categories, Notifications and Settings reachable.
+- Define compact and wide widgets, stable deep links, stale-action behavior,
+empty/error/permission states, ≥48dp touch targets, TalkBack, large text, dark theme
+and calm resource-backed copy. Do not claim continuous widget refresh or exact
+Android alarm delivery.
 
-## 7. Persistent reminders: proposed behavior
+## 7. Persistent reminders: approved defaults and state
 
-Model reminders as persisted per-occurrence state, not repeated alarms sharing an ID. A typical flow is `SCHEDULED → DUE ↔ SNOOZED → DONE | MINIMUM_DONE | SKIPPED | RESCHEDULED`; unresolved items go through an explicit day-close decision.
+Persist state per dated occurrence, not as repeated alarms sharing an ID. A normal
+flow is `SCHEDULED → DUE ↔ SNOOZED → FULL | MINIMUM | SKIPPED`; reschedule and
+day-close carryover are explicit recorded transitions. Use a stable occurrence
+identity and fire sequence. Duplicate or stale notification actions must result in
+at most one transition and one completion log.
 
-Suggested defaults in the source handoff—not yet approved settings—are Core every 20 minutes up to four audible/vibrating fires, then a silent summary/widget badge; Standard once and possibly one later repeat; Flexible once or digest-only. Separate checklist caps from existing usage-digest caps. Quiet hours suppress sound/vibration, and global Pause/Less Often controls remain visible. Notification actions must be idempotent and stop repeats immediately after an owner action.
+The owner approved these editable defaults on 2026-10-22:
 
-Rebuild scheduling after reboot, time/time-zone change, app update and permission restoration. If Android cannot provide exact timing, report the degraded/approximate behavior honestly. These are reminders, not emergency or medical alarms.
+- **Core:** every 20 minutes per occurrence, at most four sound/vibration fires
+  for that occurrence (subject to its separate daily Core cap), then silent
+  ongoing/widget visibility until action or day close.
+- **Standard:** initial reminder plus one repeat after 45–60 minutes.
+- **Flexible:** one gentle reminder or a digest.
 
-## 8. Data safety and privacy reference
+Quiet hours are a no-fire window: no new alert, sound or vibration; due state is
+preserved for the next eligible time without a catch-up burst. Global Pause
+suppresses checklist reminders through its selected resume time/day close without
+changing occurrence state or habit schedules. Less Often applies only to the
+selected trigger/profile. Separate daily Core/general checklist caps reset at local
+day close and remain distinct from the existing R12 usage-reminder cap. Profiles
+and caps are editable per item, domain and globally. Rebuild scheduling after
+reboot, time/time-zone change, app update and permission restoration. If Android
+cannot provide exact timing, explain the degraded/approximate behavior honestly.
+These are reminders, not emergency or medical alarms.
 
-The audit snapshot that accompanied the source handoff found:
+## 8. Data safety, migration and signing reference
 
-- Room database version 5, `exportSchema = false`, and `fallbackToDestructiveMigration()` in `DayLedgerDatabase.kt`.
-- No first-class habit/task/occurrence/completion model in the current database.
-- Settings backup wired to an empty callback and CSV output containing a placeholder row in `MainActivity.kt`; the visible backup action is not proof of backup/restore.
-- No explicit Android Auto Backup/data-extraction policy in the app manifest.
+The current-source audit found Room version 5, `exportSchema = false` and
+`fallbackToDestructiveMigration()`; no first-class habit/task/occurrence/completion
+model; an unwired Settings backup callback; placeholder CSV output; and no explicit
+Android OS backup/data-extraction policy. Recheck source before implementation.
 
-These observations must be rechecked against current code before execution. The safe sequence in the current roadmap is:
+Git history records Room versions 1–5 (table inventory and supported forward
+paths are in `docs/ROADMAP.md`): v1 first appears in Phase 1, v2 in Phase 2, v3 in
+Phase 3, v4 in Phase 4, and v5 in Phase 5; Phase 6 remains v5. Versions 2–5 used
+destructive fallback, and no explicit migration objects/schema exports were
+observed. Do not assume historical user data was preserved or currently empty.
+Phase 7 must cover explicit v1→v2→v3→v4→v5 paths with fictional fixtures,
+ending at the current v5 schema; it does not bump the version or add checklist
+tables. When a later schema (for example, Phase 8) is introduced, add the next
+migration and rerun the full supported v1–v5 source-version matrix.
 
-1. Phase 7 establishes a v5 baseline, complete owner-selected backup/restore, exported Room schema and explicit supported migration paths. Do not add checklist schema in this phase.
-2. Before any schema-changing APK, the owner has a verified backup file. Test restores in isolation; use fictional migration fixtures; never use destructive fallback to conceal a missing migration.
-3. The owner chooses whether Android OS backup is allowed or excluded. Do not infer this from defaults. Keep app data local except for a file the owner explicitly chooses.
-4. New checklist history remains append/audit-friendly; archive before hard-delete; no committed personal records.
+The owner approved **excluding the app database and all app-private data from
+Android cloud backup and device-to-device transfer**. The only backup is a file the
+user explicitly exports through SAF. Phase 7 must implement and verify
+`android:allowBackup="false"`, applicable legacy full-backup rules and API 31+
+`android:dataExtractionRules` for both cloud backup and device transfer. A
+scheduled reminder may prompt the user to export but must not silently create an
+app-private or OS backup.
+
+Signing evidence remains unresolved as of 2026-10-22:
+
+- Progress runs `39766581703` and `39766005737` both produced `app-progress-apk`
+  artifacts and passed CI, but artifact download attempts were blocked by the
+  sandbox's outbound-host allowlist. Certificate fingerprints have not been
+  inspected.
+- Main run `38845505942` passed tests/progress APK but failed its signed-release
+  job at **Prepare signing key on runner**. Its accessible artifact inventory has
+  no signed-release artifact. No release fingerprint is known.
+- Workflow secret names only: `ANDROID_KEYSTORE_BASE64`,
+  `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`. No
+  secret values were accessed. Do not retire or rotate signing until evidence is
+  known.
+
+Phase 7 must compare fingerprints from at least two distinct progress APKs and
+any accessible main signed release. If continuity is unstable **or cannot be
+established**, stop at an owner gate for a stable owner-controlled signing plan;
+write secret names only. Phase 7 Done also requires update-over-install proof or
+an explicit owner-approved install/migration procedure that preserves database
+history. No checklist schema ships before these safety gates are complete.
 
 ## 9. Current phase order and acceptance gates
 
-`docs/ROADMAP.md` is the source of truth for complete phase definitions. The current proposed sequence is:
+`docs/ROADMAP.md` is the source of truth for complete phase definitions. Approved
+planned sequence:
 
 1. **Phase 7 — Data safety and migration foundation** (no checklist features).
-2. **Phase 8 — Checklist core.**
+2. **Phase 8 — Checklist core**; the visible label becomes Daily Logger here,
+   without changing package/database identity.
 3. **Phase 9 — Capture, deadlines and carryover.**
 4. **Phase 10 — Persistent reminder engine.**
 5. **Phase 11 — Now/Next widget and Focus mode.**
@@ -114,9 +179,16 @@ These observations must be rechecked against current code before execution. The 
 8. **Phase 14 — Exports and durability regression.**
 9. **Phase 15 — Full device verification and final personal verdict (last).**
 
-**Hard prerequisite:** the original P0 real-device usage check must pass before Phase 8; P0–P3 criteria are not rewritten. **MVP use gate:** after Phase 10, use the checklist MVP for 14 real days before Phase 11; agree measurable criteria before that trial. This does not replace the existing P0–P3 test. Each phase ends with green CI, `app-progress-apk`, a phase record and a stop at the merge gate.
+There is no fixed calendar deadline for proposed Phases 7–15. MVP is Phases 7–10,
+then a **14-day real-use gate before Phase 11**; agree measurable criteria before
+that trial. Work one owner-approved phase per chat. The original P0 real-device
+usage check remains mandatory before Phase 8, and P0–P3 wording/criteria are not
+rewritten.
 
-The comprehensive device matrix is Phase 15. The earlier P0 prerequisite is deliberately retained because the repository rules say it gates later work; moving the full device phase last does not waive that rule or migration safety.
+Every implementation phase requires green CI, its `app-progress-apk`, an owner
+install and a short phase-specific smoke check recorded with evidence. Phase 15 is
+the full device matrix; it does not waive earlier install/smoke checks. The current
+closure is documentation-only and does not start Phase 7. Stop at the merge gate.
 
 ## 10. Acceptance-test themes
 

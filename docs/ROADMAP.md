@@ -17,11 +17,22 @@ Bootstrapped from AppFlow @ c8856022ca57cdf23ae78b9491481543db89438d on 2026-10-
 > gate before Phase 8**. Phase 15 is the full device matrix and final verdict; the
 > earlier P0 check is a prerequisite, not that full device phase.
 >
-> The earlier four-week budget has not been waived or extended. Display-name,
-> repository visibility/rename, detailed UI choice, reminder defaults and Android
-> OS-backup policy remain owner gates. The DL IDs refer to the sanitized reference
-> [`docs/reference/Daily-Logger-Handoff-for-New-Chat.md`](reference/Daily-Logger-Handoff-for-New-Chat.md)
-> and still need to be added to `docs/REQUIREMENTS.md` before implementation.
+> Owner gates closed 2026-10-22: the visible label **Daily Logger** is approved
+> for Phase 8 (the current shipped label stays Day Ledger through Phase 7); the
+> UI direction is Today checklist / Plan timeline / Focus One Thing; Android OS
+> backup is excluded for app-private data; the reminder defaults and controls are
+> approved; the repository remains public and is not renamed. Keep package/database
+> identity unchanged. The historical four-week statement applies only to Phases
+> 0–4; there is **no fixed calendar deadline for proposed Phases 7–15**. MVP is
+> Phases 7–10 followed by the 14-day real-use gate before Phase 11. One
+> owner-approved phase per chat. DL1–DL28 are now specified in
+> [`docs/REQUIREMENTS.md`](REQUIREMENTS.md); this roadmap remains a plan, not
+> implementation authorization.
+>
+> **Install evidence rule:** every implementation phase requires the owner to
+> install that phase's `app-progress-apk`, perform and record a short phase-specific
+> smoke check. Phase 15 is the full device matrix; it does not replace the smaller
+> install/smoke check at each earlier phase. A CI artifact alone is not device proof.
 
 | # | Phase (parts) | Done means | Status |
 |---|---|---|---|
@@ -51,28 +62,103 @@ Bootstrapped from AppFlow @ c8856022ca57cdf23ae78b9491481543db89438d on 2026-10-
 
 ### Phase 7 — Data safety and migration foundation (no checklist features)
 
+#### Historical Room inventory (verified from Git history, 2026-10-22)
+
+The database was introduced in Phase 1 and is still Room version 5 in Phase 6.
+The entity-file diffs between these versions add tables; the historical table sets
+are:
+
+| Room version | First recorded phase / commit | Tables present at that version |
+|---:|---|---|
+| 1 | Phase 1, `fe58d9f` | `app_usage`, `hourly_usage`, `app_info`, `categories` |
+| 2 | Phase 2, `ad0948a` | Version 1 plus `settings`, `notification_rules`, `notification_log` |
+| 3 | Phase 3, `8974737` | Version 2 plus `blocks`, `day_plans`, `templates`, `template_items` |
+| 4 | Phase 4, `5970aed` | Version 3 plus `limit_events` |
+| 5 | Phase 5, `1ff9a87` | Version 4 plus `earnings`, `learning`; Phase 6 commit `3aec2e0` remains at v5 |
+
+At the observed historical commits, `exportSchema = false`; there are no explicit
+Room migration objects. The v2–v5 builders use `fallbackToDestructiveMigration()`;
+v1 has no recorded explicit migration path. Consequently, do not assume that any
+historical install preserved data across upgrades or that a currently installed
+v5 database is empty. A missing/unknown schema must fail safely, not be wiped.
+
+**Supported forward paths for Phase 7:** fresh installs and all existing versions
+end at the current Room v5 schema. Implement explicit steps `1 → 2 → 3 → 4 → 5`;
+test each individual migration and upgrades from every supported start version
+(v1, v2, v3 and v4) into v5. Version 5 is the current baseline, not a new Phase 7
+schema bump. No downgrade path is promised. When a later schema version is added
+(for example, the Phase 8 checklist schema), add the next explicit migration and
+rerun the full v1–v5-to-new-version matrix before shipping it. Keep fictional
+fixtures for every legacy table, including representative keys and values, and
+assert that all source rows survive.
+
+#### Signing-continuity audit status (evidence gathered 2026-10-22)
+
+- Two separate assigned-branch progress runs are known: run `39766581703` (commit
+  `c07b939`, artifact `12421000391`, success) and run `39766005737` (commit
+  `ef3aca0`, artifact `12420331419`, success). Their artifacts are named
+  `app-progress-apk`. Metadata is available, but attempts to download both archives
+  were blocked because GitHub redirects them to `blob.core.windows.net`, outside
+  this environment's outbound-host allowlist. No APK certificate fingerprints
+  have therefore been inspected; matching file sizes are not signing evidence.
+- The available main run `38845505942` succeeded for tests/progress APK but failed
+  the `Signed release AAB and APK` job at **Prepare signing key on runner**. Its
+  artifact inventory contains only `app-progress-apk`; no accessible
+  `signed-android-release` artifact was found in the repository inventory. The
+  main signed-release fingerprint is unknown, not presumed stable.
+- The workflow names the release secrets
+  `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and
+  `ANDROID_KEY_PASSWORD`. No secret values were read or copied. Do not retire,
+  rotate or replace any signing identity until evidence is known.
+- When artifacts are accessible, record SHA-256 signer-certificate fingerprints
+  for at least two distinct progress APK runs and any accessible main signed
+  release, then verify update-over-install on the owner's device. If continuity is
+  different **or cannot be established**, stop at an owner gate for a stable,
+  owner-controlled signing plan. Document secret **names only**; never request or
+  store secret values in repository files or chat.
+
 **Parts**
 
-- **7.1 — Establish the v5 baseline:** inventory the existing Room tables and
-  supported installed DB versions; reconstruct and test the exact v5 schema using
-  fictional fixtures. Do not copy owner data into the repository.
-- **7.2 — Full local backup/restore:** implement an owner-chosen SAF backup with a
-  format/schema version and restore path covering every existing table; prove a
-  round-trip in an isolated database and prepare a verified owner backup before any
-  later schema-changing APK is installed.
-- **7.3 — Migration safety:** export/check in the v5 Room schema, add explicit
-  migrations for supported versions, remove destructive fallback only when the
-  upgrade paths are covered, and fail safely rather than wiping unknown data.
-- **7.4 — Privacy and CI hygiene:** record the chosen Android OS-backup policy and
-  verify its effective rules; stop duplicate CI-failure issue creation without
-  closing the existing issues; retire or correct the unused signed-release path so
-  the required personal-use CI result is green.
+- **7.1 — Schema baseline:** export/check in the current Room v5 schema; use the
+  historical inventory above to build fictional fixtures for v1–v5. Phase 7 does
+  not bump the database version or add checklist tables. No owner database or
+  personal data enters the repository.
+- **7.2 — Complete local SAF backup/restore:** implement a versioned export and
+  restore for every table, relation, setting and reminder state; verify a
+  round-trip in an isolated install and prepare an explicit user-selected backup
+  before later schema-changing APKs.
+- **7.3 — Non-destructive migrations:** implement and test every supported Phase 7
+  forward step v1→v2→v3→v4→v5; remove destructive fallback; preserve all fixture
+  rows; fail safely and clearly for an unsupported schema instead of clearing it.
+  Any later schema bump must add the next explicit migration and rerun all
+  supported legacy start-version paths before that APK ships.
+- **7.4 — Exclude Android OS backup:** implement `android:allowBackup="false"`,
+  legacy `android:fullBackupContent` rules where applicable and API 31+
+  `android:dataExtractionRules` that exclude all app-private data (including
+  database, files and preferences) from both cloud backup and device transfer.
+  Verify the merged manifest and actual platform backup/data-extraction behavior.
+  Only a file the user explicitly exports through SAF is a backup.
+- **7.5 — Signing and update-install proof:** compare the certificate fingerprints
+  above, then install a prior progress APK and update it with a later APK without
+  uninstalling; verify package identity, app launch and seeded fictional database
+  history. If update-over-install is impossible, Phase 7 needs an explicit
+  owner-approved install/migration procedure that demonstrably preserves database
+  history. An unstable or unknown progress signer stops at the owner gate described
+  above; do not silently switch to a different key or sign-and-ship path.
 
-**Done means:** v5 fictional rows survive backup/restore and migration tests;
-current data can be saved to an owner-selected file; no supported upgrade path can
-silently destroy data; P0 passes on the owner's phone before Phase 8; CI uploads
-`app-progress-apk`. No checklist UI or checklist-table migration ships in this
-phase. The full device matrix remains Phase 15.
+**Done means:** every supported v1–v4 upgrade into the current v5 schema is
+non-destructive; the complete SAF backup/restore round-trip preserves all rows and
+settings; Android OS backup/data-transfer exclusion is verified; P0 passes on the
+owner's phone before Phase 8; and CI uploads `app-progress-apk`. Signing continuity
+has evidence from at least two progress runs and any accessible main signed
+release, with either update-over-install proof or an explicit owner-approved,
+data-preserving install/migration procedure. If progress signing is unstable or
+still unknown, Phase 7 stops at the owner gate and is not marked Done. The owner
+installs the Phase 7 APK and records a short smoke check. No checklist UI, database
+version bump or checklist-table migration ships in this phase; the visible label
+stays Day Ledger. A later checklist schema increment must add an explicit migration
+from v5 and rerun the full supported-source matrix. The full device matrix remains
+Phase 15.
 
 ### Phase 8 — Checklist core
 
@@ -84,12 +170,17 @@ phase. The full device matrix remains Phase 15.
   Minimum, Later, Skip and Undo; completed items collapse.
 - **8.3 — Optional evidence:** after ticking, allow minutes/quantity/topic/note or
   no detail; usage evidence may suggest but never silently complete an item.
-- **8.4 — Habits and defaults:** generic editable domains/templates, weekday and
-  weekly schedules, archive and pause basics; no owner routine or timetable seeded.
+- **8.4 — Habits, defaults and front door:** generic editable domains/templates,
+  weekday and weekly schedules, archive and pause basics; implement the approved
+  UI Design v2 and ship the visible label **Daily Logger** with this Phase 8
+  checklist front door. Preserve application/package and Room database identity;
+  do not seed an owner routine or timetable.
 
 **Done means:** a weekday habit and one-off task create only the correct
 occurrences; Done works without a detail form; Minimum is distinct from Full; Undo
-works; restart/reboot adds no duplicates; Phase 7 data remains intact after upgrade.
+works; restart/reboot adds no duplicates; Phase 7 data remains intact after
+upgrade; the first screen follows UI Design v2 and displays Daily Logger while
+`io.github.pabi277.dayledger` remains unchanged.
 
 ### Phase 9 — Capture, deadlines and carryover
 
@@ -116,14 +207,16 @@ explicit next action rather than silently rolling forever.
   quiet-hour handling, caps and persisted next-fire state.
 - **10.2 — Actions:** Done, Minimum, Later/Snooze, Reschedule and Skip where Android
   permits; deduplicate stale or repeated taps and write one completion log.
-- **10.3 — Controls:** global Pause (1 hour/today), Less Often, separate general
-  and Core caps, and silent visibility after audible repeats.
+- **10.3 — Controls:** global Pause with a visible resume time, Less Often,
+  separate daily Core/general caps, and silent visibility after audible repeats.
 - **10.4 — Reliability health:** restore scheduling after reboot, clock/time-zone
   change, app update and permission re-grant; show when Android timing is approximate.
 
 **Done means:** a Core reminder repeats only within its editable profile, stops on
-an action, never sounds during quiet hours, survives reboot and creates exactly one
-log; Flexible reminders remain gentle. Android/OEM limits are disclosed honestly.
+an action, posts no new alert or sound/vibration during quiet hours, preserves due
+state for the next eligible time without a catch-up burst, survives reboot and
+creates exactly one log; Flexible reminders remain gentle. Android/OEM limits are
+disclosed honestly.
 
 > **MVP use gate after Phase 10:** before Phase 11, use the checklist MVP for 14
 > real days. Agree the measurable criteria before starting. Record capture/tick/day
@@ -186,7 +279,7 @@ matches actual backup behavior. No personal records are committed.
   explanations.
 - **15.3 — Daily Logger journey:** one-handed capture/tick/close, widget refresh
   honesty, large text/TalkBack, Accessibility-off path, and never-block earning and
-always-allowed checks.
+  always-allowed checks.
 - **15.4 — Record the original P0–P3 outcome and a personal verdict:** use the
   existing criteria unchanged; report observed effort, reminder behavior, battery
   observations and forgotten captured items. Do not claim a pass without owner-side

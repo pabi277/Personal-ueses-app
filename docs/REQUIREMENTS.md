@@ -344,3 +344,103 @@ answered, and every default is logged as a reversible agent decision.
 5. Device make/model + Android version (drives the OEM permission/battery
    verification pass in phase 1).
 6. Is ₹12.50 per install the only rate, or does it vary by offer/task type?
+
+## 13. Daily Logger supplement (owner-approved direction, 2026-10-22)
+
+This is an additive future-product supplement. It does **not** change the wording,
+priorities, acceptance criteria or historical status of R1–R34 or P0–P3 above, and
+it does not describe features already shipped in the current APK. New examples and
+test data in this section are generic and fictional.
+
+### Distinct concepts and lifecycle
+
+- **Habit rule:** a reusable recurrence definition (schedule, preferred window,
+  target and optional Minimum Version). It generates dated occurrences; editing or
+  archiving the rule must not rewrite earlier records.
+- **One-off task/deadline:** a single intent with an optional date-only deadline or
+  date-and-time. It does not recur unless the owner explicitly makes a habit.
+- **Dated checklist occurrence:** the immutable-for-history instance of a habit or
+  task on a particular local date, with its own status and reminder state.
+- **Completion log:** an append/audit-friendly record of Full or Minimum completion
+  and any optional evidence. Skip, reschedule and undo remain distinguishable; a
+  second tap must not create a second completion.
+- **Time block:** a planned interval for *when* something may happen. It may link
+  to zero or more checklist items but is not itself a checklist item or proof of
+  completion.
+
+### Persistent reminder policy
+
+Persist reminder state per dated occurrence, not only as a transient alarm. A
+normal lifecycle is `SCHEDULED → DUE ↔ SNOOZED → FULL | MINIMUM | SKIPPED`; a
+reschedule or day-close carryover is an explicit recorded transition, not an
+implicit completion. Store a stable occurrence identity and fire sequence. Every
+notification action must be idempotent: repeated or stale taps can produce at most
+one corresponding state transition and one completion log, and terminal actions
+cancel that occurrence's remaining audible repeats.
+
+The approved, editable starting profiles are:
+
+- **Core:** every 20 minutes per occurrence, with at most four sound/vibration
+  fires for that occurrence, subject to a separate editable daily Core cap; after
+  those fires, remain visible silently in an ongoing notification/widget until an
+  action or day close.
+- **Standard:** an initial reminder and one repeat 45–60 minutes later.
+- **Flexible:** one gentle reminder or a digest.
+
+Quiet hours, global Pause, Less Often and separate daily caps for Core and
+general reminders are mandatory; these checklist caps are distinct from the
+existing usage-reminder cap in R12. Quiet hours are a no-fire window: post no new
+alert, sound or vibration; keep the occurrence pending, compute its next eligible
+time, and never burst missed repeats when quiet hours end. An already-posted
+ongoing status may remain silent. Global Pause suppresses checklist reminders only
+through the selected resume time/day close, preserves due state and does not alter
+habit schedules or mark work complete. Less Often changes only the selected
+trigger/profile. Reached daily caps and Pause preserve state without an alert storm;
+caps reset at local day close. Profiles and caps can be edited per item, domain
+and application-wide; these defaults are not hard-coded limits. When Android
+denies a permission or delays an alarm, show the actual degraded state rather than
+claiming a reminder was delivered.
+
+### DL1–DL28 requirements and acceptance tests
+
+Priority: **M = must**, **S = should**, **C = could**. `R-IDs` map the new
+requirements to existing requirements where they overlap; a dash means no direct
+R-ID applies. Tests use only fictional data and are future acceptance tests, not
+claims of current verification.
+
+| ID | Requirement | P | Related R-IDs | Acceptance test |
+|---|---|---:|---|---|
+| **DL1** | Today is a checklist command center: Now/Next, overdue/due items, time-window groups, remaining Core count and Quick Capture. Usage is supporting “Phone evidence,” never the hero. | M | R13, R20–R24, R29 | With one due, one timed and one anytime fictional item, the first viewport makes the next action and remaining Core count clear; Quick Capture is reachable without opening Usage. |
+| **DL2** | Quick Capture accepts a title first; date, domain, recurrence and details are optional. | M | R21–R22, R31 | From Today, save a title-only item to Inbox/Today in ≤10 seconds with no required field beyond its title. |
+| **DL3** | Keep habit rules, one-off tasks, dated occurrences, completion logs and time blocks separate as defined above. | M | R20–R22, R31 | Edit a fictional habit after two dates have completed; the prior occurrences and completion logs remain byte-for-byte unchanged while only future generation uses the new rule. |
+| **DL4** | A Morning Brief confirms the day type/template, due items and editable Top 3 without generating duplicate occurrences. | M | R21–R22 | With an existing template, complete the brief in ≤60 seconds; run generation twice and verify identical occurrence IDs/counts. |
+| **DL5** | Habits support daily, selected-weekday, weekly and interval schedules, preferred windows, weekly targets, an optional Minimum Version, pause and archive. | M | R22, R28–R29 | Exercise each recurrence across a week boundary; verify only scheduled dates generate, Minimum remains distinct from Full, and archived rules generate nothing further. |
+| **DL6** | One-off tasks support a date-only deadline or optional time and appear in Today/Plan ordered by due urgency. | M | R20–R22, R29 | Create date-only and timed tasks; verify local-date display and ordering, with neither task generating a recurring occurrence. |
+| **DL7** | An occurrence offers Done, Minimum, Later, Reschedule, Skip, Edit and Undo as appropriate; the primary Done action never requires a detail form. | M | R17, R21, R24, R31 | Complete each action on a fictional occurrence; Done works in one tap, Skip is not counted as complete, and Undo restores the prior status without deleting its audit record. |
+| **DL8** | Optional completion evidence (minutes, quantity, topic or note) is offered after a tick; “no detail” is always a valid choice. | M | R25, R28–R29 | Complete an item, dismiss the optional-detail sheet, and verify the completion remains recorded with no invented evidence. |
+| **DL9** | Day close requires an explicit decision for each unfinished item: Move, Schedule, Shrink to Minimum, or Drop/archive; flag repeated carryover. | M | R21, R24, R29, R31 | Close a fictional day with leftovers; verify each receives one explicit outcome, no item rolls indefinitely by default, and repeated carryover is visibly flagged. |
+| **DL10** | Pause may apply to a habit, date or domain. Paused dates are excluded from scheduled-day and missed-item denominators. | M | R10, R12, R28–R29 | Pause a weekly habit across one scheduled date; verify it creates no reminder and does not lower consistency for that date. |
+| **DL11** | Consistency supports weekly targets and separate Full/Minimum counts; it does not require a perfect streak. | S | R28–R29 | For a fictional 5-of-7 target with one paused day, calculate against scheduled, unpaused days and display Full and Minimum counts separately. |
+| **DL12** | Reminder profiles implement the approved Core, Standard and Flexible starting defaults, with per-item/domain/global edits and independent daily Core/general caps. | M | R9–R12, R23, R33–R34 | Verify Core's 20-minute cadence and ≤4 audible fires per occurrence plus its separate daily cap, Standard's initial + one 45–60-minute repeat, and Flexible's single gentle reminder/digest; then change each level and confirm only the intended scope changes. |
+| **DL13** | Reminder actions are idempotent and occurrence-scoped; stale actions cannot complete or reschedule the wrong item. | M | R9–R12, R31 | Deliver the same action intent twice and replay a stale notification after reschedule; verify at most one matching transition/log and no effect on another occurrence. |
+| **DL14** | After audible Core repeats, keep the unresolved item visible silently in an ongoing notification/widget until action or day close. | S | R13, R15, R21 | Exhaust the Core audible cap; verify there is no further sound/vibration, the item remains visibly pending, and it clears or updates only after action/day close. |
+| **DL15** | Provide global Pause, Less Often, quiet hours and separate daily Core/general caps; changes are explicit, reversible and do not silently weaken another profile. | M | R10, R12 | Pause reminders through a selected period, activate Less Often for one trigger and hit each cap independently; verify no new alert/sound/vibration fires in quiet hours, due state is preserved for the next eligible time, and controls explain the resulting state. |
+| **DL16** | Persist and rebuild reminder schedules after reboot, app update, time/time-zone change and notification/exact-alarm permission restoration. | M | R10, R31, R33 | Exercise each event with fictional due items; verify one correct future schedule per occurrence, no duplicates, and a visible degraded-state explanation when Android denies timing access. |
+| **DL17** | Evening Close reviews completions and leftovers, allows a one-line learning reflection, and prepares tomorrow's editable Top 3. | M | R24, R28–R31 | A normal fictional day can be closed in ≤3 minutes; reflection may be skipped and tomorrow's Top 3 remains editable. |
+| **DL18** | Tomorrow planning merges a selected template, due tasks and explicit carryovers without duplicates. | M | R21–R22, R31 | Reapply a template and regenerate Tomorrow twice; verify stable occurrence IDs, no duplicate tasks and an editable Top 3. |
+| **DL19** | Weekly Review shows pause-aware consistency and linked source records, with one primary actionable suggestion. | S | R6, R26–R29 | Recompute a fictional report from stored records; drill each displayed count to its sources and verify exactly one primary suggestion. |
+| **DL20** | History can be searched by date, domain and text while retaining honest edited/completed timestamps. | S | R1, R28, R31 | Search fictional completion history by all three filters and verify edits do not rewrite original completion time or outcome. |
+| **DL21** | A time block can link to zero or more checklist items; timer elapsed minutes may prefill evidence but never complete an item. | S | R19–R24, R28 | Finish a timer linked to an item and verify a minutes suggestion appears while status remains pending until explicit confirmation. |
+| **DL22** | Phone usage is evidence only: never infer that learning, work or any other item is complete from foreground usage. Keep it below the Today checklist. | M | R1–R3, R7 | Simulate high usage for a linked app; verify no completion/log is created and the reading is labelled device-reported under “Phone evidence.” |
+| **DL23** | Optional Learning/Earning logs may be started from an occurrence and linked to it without double-counting either record. | S | R25–R28 | Create a linked log, repeat the action and undo it; verify one linked record and one source total, with the checklist completion remaining independently auditable. |
+| **DL24** | Limits integration is optional; the checklist remains usable with Accessibility disabled and never blocks essential/always-allowed apps. | M | R16–R19 | Disable Accessibility and run capture, Done, Minimum and day close; verify these work and no checklist action blocks an essential app. |
+| **DL25** | Provide non-destructive Room migrations for every supported historical version 1–5 into the current schema; no silent destructive fallback. | M | R31–R32 | Seed every historical schema version with fictional rows in each table; test v1→v2→v3→v4→v5 and each v2–v5 start path into the current v5 schema, then assert row counts, keys and values survive. When a later schema version (for example, the Phase 8 checklist schema) is introduced, add the next explicit migration and rerun every supported source-version path into it; no path may use destructive fallback. |
+| **DL26** | Provide a complete versioned local backup/restore through a user-selected SAF file, covering all existing and future app tables/settings/reminder state. | M | R31 | Export fictional rows/settings from every table, clear an isolated test install, restore the selected file and compare counts, IDs, relationships and values; confirm the export is the only backup copy. |
+| **DL27** | Exclude the database and all app-private Daily Logger data from Android OS cloud backup and device-to-device transfer; only an explicitly exported SAF file is a backup. | M | R31–R32 | Inspect the merged manifest; verify `android:allowBackup="false"`, legacy full-backup rules where applicable and API 31+ extraction rules exclude app-private database, files, preferences, device-protected data and any included app-specific external domain from both cloud and device transfer; run a platform backup/data-extraction check and verify the user-selected SAF file still restores. |
+| **DL28** | A local app lock is optional and requires a separate owner gate; no login, account or cloud recovery. | C | R32 | Do not ship without the separate gate; if approved, verify notification actions and essential access cannot be locked out and local recovery is documented. |
+
+**Backup clarification for R31:** a scheduled reminder may prompt the user to
+create an export, but the app must not silently copy a backup to Android OS backup
+or an app-private automatic-backup location. The only backup is the versioned file
+the user explicitly exports through SAF. Android OS backup/data-transfer exclusion
+is a Phase 7 implementation and verification item, not a current-build claim.
