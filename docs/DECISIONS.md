@@ -297,6 +297,14 @@
   update-over-install proof or owner-approved data-preserving procedure; and the
   P0 owner-device check before Phase 8. If signing continuity is unknown or
   unstable, stop at the owner gate in `docs/ROADMAP.md`.
+- **OPEN — Phase 7 signing gate (2026-10-22).** Evidence gathered in
+  `docs/phases/07-data-safety-migration.md` shows the progress APK signer is a
+  per-runner throwaway debug key and the release job is missing the secret name
+  `ANDROID_KEYSTORE_BASE64` while Gradle has no `signingConfigs`, so no stable
+  identity exists. Awaiting, from the owner only: the device update-over-install
+  result (both run IDs), the installed data's value (disposable / valuable /
+  absent) and approval of the one-key owner-controlled identity. No signing,
+  workflow or Gradle change is made before that answer.
 - Phases 7–15 have no fixed calendar deadline. Before the 14-day real-use gate
   after Phase 10, agree its measurable criteria; it does not replace P0–P3.
 - Owner-local domains, routines, tasks, app lists and reminder windows remain

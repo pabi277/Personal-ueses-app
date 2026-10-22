@@ -62,6 +62,19 @@ Bootstrapped from AppFlow @ c8856022ca57cdf23ae78b9491481543db89438d on 2026-10-
 
 ### Phase 7 — Data safety and migration foundation (no checklist features)
 
+> 🚧 **Status: BLOCKED at the owner signing gate (2026-10-22).** The signing
+> evidence gate was run first, as required, and failed: progress APKs are signed
+> by an AGP-generated debug key that is recreated on every runner (no
+> `signingConfigs` in `app/build.gradle.kts:8–39`, no keystore restore in
+> `.github/workflows/ci-build.yml:29–66`), the main release job still fails on the
+> missing name `ANDROID_KEYSTORE_BASE64` (run `39771615912`), and no artifact
+> fingerprint could be inspected because artifact downloads are blocked here.
+> No implementation code, workflow or Gradle signing change was made. Evidence and
+> the owner's one-key setup plan are in
+> [`docs/phases/07-data-safety-migration.md`](phases/07-data-safety-migration.md).
+> Phase 7 resumes only after the owner answers the gate and supplies the installed
+> data's value.
+
 #### Historical Room inventory (verified from Git history, 2026-10-22)
 
 The database was introduced in Phase 1 and is still Room version 5 in Phase 6.

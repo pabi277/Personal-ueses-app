@@ -117,11 +117,12 @@
 - The 2026-10-22 phase plan places the full device-validation phase last
   (Phase 15). Phase 7 is data-safety/migration readiness; the existing P0
   real-device usage check remains a hard pre-feature gate before Phase 8.
-- The 2026-10-22 product and delivery gates are closed. This documentation
-  closure is documentation-only and does **not** start Phase 7. After the docs
-  merge gate and separate owner authorization, work on Phase 7 only; do not
-  implement checklist features before its migration, backup and signing/install
-  acceptance is met.
+- The 2026-10-22 product and delivery gates are closed, and PR #11 was merged
+  into `main` at `8070713`. Phase 7 is owner-authorised as of 2026-10-22 but
+  **stopped at its signing gate** before any implementation code; see
+  `docs/phases/07-data-safety-migration.md` and the ROADMAP status banner. Do not
+  implement checklist features before Phase 7's migration, backup and
+  signing/install acceptance is met.
 - The Phase 10 MVP use-gate is a separate 14-day real-use trial before Phase 11;
   agree measurable criteria before that trial. It does not replace original P0–P3.
 - Current-source audit: Phase 6's backup/restore claim is not demonstrated by the
@@ -129,12 +130,19 @@
   placeholder). Room is v5 with `exportSchema = false` and destructive fallback;
   Android OS-backup exclusion is not implemented. Phase 7 must close these gaps
   before any checklist schema change.
-- Signing audit status (2026-10-22): progress artifact metadata for runs
-  `39766581703` and `39766005737` is available, but archive downloads were blocked
-  by the sandbox's outbound-host allowlist, so certificate fingerprints are
-  unknown. Main run `38845505942` failed at signing-key preparation; no accessible
-  main signed-release artifact was found. Do not claim signing stability. If it is
-  unknown or unstable in Phase 7, stop at the owner gate and use secret names only.
+- Signing audit status (2026-10-22, updated with the Phase 7 gate evidence): the
+  current `main` tip run `39771615912` again fails `Signed release AAB and APK` at
+  `Prepare signing key on runner` with `Missing required Actions secret:
+  ANDROID_KEYSTORE_BASE64`; the loop exits at the first empty name, so only that
+  one name is proven absent. `app/build.gradle.kts` has no `signingConfigs` at all,
+  so nothing reads the four secret names and `assembleRelease` would emit an
+  unsigned APK even with all secrets present. The progress APK has no keystore
+  restore step, so each fresh runner generates a new debug key — the design is
+  unstable by construction, not merely unproven. Artifact archives still cannot be
+  downloaded here (`*.blob.core.windows.net` is outside the allowlist; `gh run
+  download` and `curl` both fail), so no certificate fingerprint is known. Phase 7
+  is therefore stopped at the owner signing gate; see
+  `docs/phases/07-data-safety-migration.md`.
 
 - Owner-local setup remains optional and on-device: enabled domains, timetable,
   app lists, reminder windows and routines are not committed or asked as a blocking
@@ -148,11 +156,18 @@
 1. Read `docs/REQUIREMENTS.md`, `docs/ROADMAP.md`, `docs/DECISIONS.md`,
    `docs/UI_DESIGN.md` and the latest `docs/phases/` record — trust the repo, not
    memory. Ask nothing that is already recorded.
-2. This documentation-closure round must pass its PR review/merge gate first. Do
-   not start Phase 7 until the owner separately authorizes that phase. Then
-   implement **Phase 7 only** (data safety and migration foundation),
-   evidence-first. Keep the full device matrix at Phase 15 and preserve P0 before
-   Phase 8.
+2. Phase 7 (data safety and migration foundation) is owner-authorised but
+   **blocked at its signing evidence gate**: progress APKs are signed by a
+   per-runner throwaway debug key, the release job is missing
+   `ANDROID_KEYSTORE_BASE64` and Gradle has no `signingConfigs`. Do not write
+   Phase 7 implementation code, and do not change workflow/Gradle signing, until
+   the owner answers the gate in `docs/phases/07-data-safety-migration.md` §7:
+   (a) the device update-over-install result with both run IDs, (b) whether the
+   installed data is disposable, valuable or absent, and (c) approval of the
+   single owner-controlled signing identity (four secret **names**
+   `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`,
+   `ANDROID_KEY_PASSWORD`; values are the owner's alone). Keep the full device
+   matrix at Phase 15 and preserve P0 before Phase 8.
 3. End each implementation phase with CI green and its `app-progress-apk`; the
    owner installs it and records a short smoke check plus the phase-specific
    evidence in the phase record. Update roadmap/prompt and stop at the merge gate.
