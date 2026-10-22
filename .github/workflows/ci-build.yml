@@ -109,7 +109,15 @@ jobs:
           set -uo pipefail
           APK=$(ls app/build/outputs/apk/debug/*.apk 2>/dev/null | head -n 1 || true)
           OUT="$RUNNER_TEMP/signing-certificate.txt"
-          BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* 2>/dev/null | sort -V | tail -n 1 || true)
+          # Find apksigner wherever the SDK actually lives on the runner.
+          APKSIGNER=""
+          for dir in $(ls -d "${ANDROID_HOME:-}"/*/build-tools/* "${ANDROID_HOME:-}"/build-tools/* "${ANDROID_SDK_ROOT:-}"/*/build-tools/* "${ANDROID_SDK_ROOT:-}"/build-tools/* 2>/dev/null | sort -V -r); do
+            if [[ -x "$dir/apksigner" ]]; then APKSIGNER="$dir/apksigner"; break; fi
+          done
+          if [[ -z "$APKSIGNER" ]]; then
+            APKSIGNER=$(find "${ANDROID_HOME:-/nonexistent}" "${ANDROID_SDK_ROOT:-/nonexistent}" /usr/local/lib/android/sdk -name apksigner -type f 2>/dev/null | head -n 1 || true)
+          fi
+          echo "apksigner: ${APKSIGNER:-not found}"
           {
             echo "apk: $(basename "$APK")"
             echo "workflow run: $GITHUB_RUN_ID"
@@ -119,8 +127,8 @@ jobs:
             else
               echo "signing mode: throwaway debug key (owner secrets absent)"
             fi
-            if [[ -n "$BUILD_TOOLS" && -x "$BUILD_TOOLS/apksigner" ]]; then
-              "$BUILD_TOOLS/apksigner" verify --print-certs "$APK" 2>&1 | grep -Ei "signer #1 certificate (DN|SHA-256)" || true
+            if [[ -n "$APKSIGNER" && -x "$APKSIGNER" ]]; then
+              "$APKSIGNER" verify --print-certs "$APK" 2>&1 | grep -Ei "signer #1 certificate (DN|SHA-256)" || true
             else
               echo "::warning::apksigner not found; certificate fingerprint not recorded."
             fi
@@ -255,14 +263,22 @@ jobs:
           set -uo pipefail
           APK=$(ls app/build/outputs/apk/release/*.apk 2>/dev/null | head -n 1 || true)
           OUT="$RUNNER_TEMP/signing-certificate.txt"
-          BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* 2>/dev/null | sort -V | tail -n 1 || true)
+          # Find apksigner wherever the SDK actually lives on the runner.
+          APKSIGNER=""
+          for dir in $(ls -d "${ANDROID_HOME:-}"/*/build-tools/* "${ANDROID_HOME:-}"/build-tools/* "${ANDROID_SDK_ROOT:-}"/*/build-tools/* "${ANDROID_SDK_ROOT:-}"/build-tools/* 2>/dev/null | sort -V -r); do
+            if [[ -x "$dir/apksigner" ]]; then APKSIGNER="$dir/apksigner"; break; fi
+          done
+          if [[ -z "$APKSIGNER" ]]; then
+            APKSIGNER=$(find "${ANDROID_HOME:-/nonexistent}" "${ANDROID_SDK_ROOT:-/nonexistent}" /usr/local/lib/android/sdk -name apksigner -type f 2>/dev/null | head -n 1 || true)
+          fi
+          echo "apksigner: ${APKSIGNER:-not found}"
           {
             echo "apk: $(basename "$APK")"
             echo "workflow run: $GITHUB_RUN_ID"
             echo "commit: $GITHUB_SHA"
             echo "signing mode: owner keystore"
-            if [[ -n "$BUILD_TOOLS" && -x "$BUILD_TOOLS/apksigner" ]]; then
-              "$BUILD_TOOLS/apksigner" verify --print-certs "$APK" 2>&1 | grep -Ei "signer #1 certificate (DN|SHA-256)" || true
+            if [[ -n "$APKSIGNER" && -x "$APKSIGNER" ]]; then
+              "$APKSIGNER" verify --print-certs "$APK" 2>&1 | grep -Ei "signer #1 certificate (DN|SHA-256)" || true
             else
               echo "::warning::apksigner not found; certificate fingerprint not recorded."
             fi
