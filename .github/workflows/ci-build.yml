@@ -114,6 +114,11 @@ jobs:
             echo "apk: $(basename "$APK")"
             echo "workflow run: $GITHUB_RUN_ID"
             echo "commit: $GITHUB_SHA"
+            if [[ -n "${ANDROID_KEYSTORE_PATH:-}" ]]; then
+              echo "signing mode: owner keystore"
+            else
+              echo "signing mode: throwaway debug key (owner secrets absent)"
+            fi
             if [[ -n "$BUILD_TOOLS" && -x "$BUILD_TOOLS/apksigner" ]]; then
               "$BUILD_TOOLS/apksigner" verify --print-certs "$APK" 2>&1 | grep -Ei "signer #1 certificate (DN|SHA-256)" || true
             else
@@ -122,6 +127,13 @@ jobs:
           } | tee "$OUT"
           # A certificate fingerprint is public information; a keystore value is not.
           echo "SIGNING_CERT_FILE=$OUT" >> "$GITHUB_ENV"
+          # Publish the public fingerprint as a run annotation so two runs can be
+          # compared from the API (artifact and log downloads are not available in
+          # every environment). This is a certificate fingerprint, not a secret.
+          FINGERPRINT=$(grep -i "SHA-256 digest" "$OUT" | head -n 1 | tr -d '\r')
+          if [[ -n "$FINGERPRINT" ]]; then
+            echo "::notice title=APK signer SHA-256::$FINGERPRINT (run $GITHUB_RUN_ID, commit ${GITHUB_SHA:0:7})"
+          fi
       - name: Verify OS-backup exclusion in the merged manifest
         run: |
           set -uo pipefail
@@ -227,12 +239,17 @@ jobs:
             echo "apk: $(basename "$APK")"
             echo "workflow run: $GITHUB_RUN_ID"
             echo "commit: $GITHUB_SHA"
+            echo "signing mode: owner keystore"
             if [[ -n "$BUILD_TOOLS" && -x "$BUILD_TOOLS/apksigner" ]]; then
               "$BUILD_TOOLS/apksigner" verify --print-certs "$APK" 2>&1 | grep -Ei "signer #1 certificate (DN|SHA-256)" || true
             else
               echo "::warning::apksigner not found; certificate fingerprint not recorded."
             fi
           } | tee "$OUT"
+          FINGERPRINT=$(grep -i "SHA-256 digest" "$OUT" | head -n 1 | tr -d '\r')
+          if [[ -n "$FINGERPRINT" ]]; then
+            echo "::notice title=Release signer SHA-256::$FINGERPRINT (run $GITHUB_RUN_ID, commit ${GITHUB_SHA:0:7})"
+          fi
       - name: Upload signed release artifacts
         uses: actions/upload-artifact@v4
         with:
