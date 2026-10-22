@@ -45,6 +45,14 @@ android {
     }
 
     signingConfigs {
+        // Keep a v1 (JAR) signature on the progress APK as well as v2. With
+        // minSdk 26 AGP would otherwise emit v2 only, which is fine for installs
+        // but leaves nothing for `keytool -printcert -jarfile` to read — and the
+        // certificate fingerprint is the evidence that signing is stable.
+        getByName("debug") {
+            enableV1Signing = true
+            enableV2Signing = true
+        }
         if (hasOwnerSigning) {
             create("owner") {
                 storeFile = ownerKeystoreFile

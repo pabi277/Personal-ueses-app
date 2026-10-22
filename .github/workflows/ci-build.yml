@@ -131,10 +131,12 @@ jobs:
             else
               echo "tool: keytool -printcert -jarfile"
               keytool -printcert -jarfile "$APK" 2>&1 | tail -n 25 || true
+              echo "--- signature entries inside the APK ---"
+              unzip -l "$APK" 2>/dev/null | grep -Ei "META-INF/.*(RSA|DSA|EC|SF)$|META-INF/MANIFEST" || echo "none (v2-only signature)"
             fi
           } | tee "$OUT"
-          FINGERPRINT=$(awk '/SHA-256 digest:/{print; exit} /^[[:space:]]*SHA256:/{print; exit}' "$OUT" || true)
-          SHORT=$(printf '%s' "$FINGERPRINT" | sed -E 's/.*(digest:|SHA256:)//' | tr -cd '0-9A-Fa-f' | cut -c1-24 || true)
+          FINGERPRINT=$(grep -iE "(SHA-256 digest|SHA256:)" "$OUT" | head -n 1 || true)
+          SHORT=$(printf '%s' "$FINGERPRINT" | sed -E 's/.*(SHA-256 digest:|SHA256:)//' | tr -cd '0-9A-Fa-f' | cut -c1-24 || true)
           [[ -n "$SHORT" ]] || SHORT="unknown"
           if [[ "$SHORT" == "unknown" ]]; then
             echo "::warning::No certificate fingerprint could be extracted; see signing-certificate.txt"
@@ -264,7 +266,7 @@ jobs:
               keytool -printcert -jarfile "$APK" 2>&1 | tail -n 25 || true
             fi
           } | tee -a "$OUT"
-          FINGERPRINT=$(awk '/SHA-256 digest:/{print; exit} /^[[:space:]]*SHA256:/{print; exit}' "$OUT" || true)
+          FINGERPRINT=$(grep -iE "(SHA-256 digest|SHA256:)" "$OUT" | head -n 1 || true)
           if [[ -n "$FINGERPRINT" ]]; then
             echo "::notice title=Release signer SHA-256::${FINGERPRINT} (run $GITHUB_RUN_ID, commit ${GITHUB_SHA:0:7})"
           else
