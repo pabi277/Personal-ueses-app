@@ -1,3 +1,5 @@
+import java.io.File
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -22,7 +24,7 @@ val ownerKeystorePassword: String? = System.getenv("ANDROID_KEYSTORE_PASSWORD")
 val ownerKeyAlias: String? = System.getenv("ANDROID_KEY_ALIAS")
 val ownerKeyPassword: String? = System.getenv("ANDROID_KEY_PASSWORD")
 
-val ownerKeystoreFile = ownerKeystorePath?.let { java.io.File(it) }
+val ownerKeystoreFile = ownerKeystorePath?.let { File(it) }
 val hasOwnerSigning: Boolean =
     ownerKeystoreFile?.isFile == true &&
         !ownerKeystorePassword.isNullOrBlank() &&
