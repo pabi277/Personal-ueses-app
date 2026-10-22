@@ -107,9 +107,9 @@ jobs:
       - name: Record APK signing certificate
         run: |
           set -uo pipefail
-          APK=$(ls app/build/outputs/apk/debug/*.apk | head -n 1)
+          APK=$(ls app/build/outputs/apk/debug/*.apk 2>/dev/null | head -n 1 || true)
           OUT="$RUNNER_TEMP/signing-certificate.txt"
-          BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* 2>/dev/null | sort -V | tail -n 1)
+          BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* 2>/dev/null | sort -V | tail -n 1 || true)
           {
             echo "apk: $(basename "$APK")"
             echo "workflow run: $GITHUB_RUN_ID"
@@ -130,9 +130,15 @@ jobs:
           # Publish the public fingerprint as a run annotation so two runs can be
           # compared from the API (artifact and log downloads are not available in
           # every environment). This is a certificate fingerprint, not a secret.
-          FINGERPRINT=$(grep -i "SHA-256 digest" "$OUT" | head -n 1 | tr -d '\r')
+          # GitHub runs this with `bash -e`, so the capture must never abort the job.
+          FINGERPRINT=""
+          if [[ -s "$OUT" ]]; then
+            FINGERPRINT=$(awk '/SHA-256 digest: /{print; exit}' "$OUT" || true)
+          fi
           if [[ -n "$FINGERPRINT" ]]; then
-            echo "::notice title=APK signer SHA-256::$FINGERPRINT (run $GITHUB_RUN_ID, commit ${GITHUB_SHA:0:7})"
+            echo "::notice title=APK signer SHA-256::${FINGERPRINT} (run $GITHUB_RUN_ID, commit ${GITHUB_SHA:0:7})"
+          else
+            echo "::warning::No SHA-256 certificate fingerprint found in the apksigner output."
           fi
       - name: Verify OS-backup exclusion in the merged manifest
         run: |
@@ -150,7 +156,7 @@ jobs:
           grep -q 'android:allowBackup="false"' "$MANIFEST" || { echo "::error::allowBackup is not false in the merged manifest"; fail=1; }
           grep -q 'android:fullBackupContent="@xml/backup_rules"' "$MANIFEST" || { echo "::error::fullBackupContent is not wired to @xml/backup_rules"; fail=1; }
           grep -q 'android:dataExtractionRules="@xml/data_extraction_rules"' "$MANIFEST" || { echo "::error::dataExtractionRules is not wired to @xml/data_extraction_rules"; fail=1; }
-          APK=$(ls app/build/outputs/apk/debug/*.apk | head -n 1)
+          APK=$(ls app/build/outputs/apk/debug/*.apk 2>/dev/null | head -n 1 || true)
           AAPT2=$(ls -d "$ANDROID_HOME"/build-tools/* 2>/dev/null | sort -V | tail -n 1)
           if [[ -n "$AAPT2" && -x "$AAPT2/aapt2" ]]; then
             echo "--- backup flags as packaged in the APK ---"
@@ -232,9 +238,9 @@ jobs:
       - name: Record release signing certificate
         run: |
           set -uo pipefail
-          APK=$(ls app/build/outputs/apk/release/*.apk | head -n 1)
+          APK=$(ls app/build/outputs/apk/release/*.apk 2>/dev/null | head -n 1 || true)
           OUT="$RUNNER_TEMP/signing-certificate.txt"
-          BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* 2>/dev/null | sort -V | tail -n 1)
+          BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* 2>/dev/null | sort -V | tail -n 1 || true)
           {
             echo "apk: $(basename "$APK")"
             echo "workflow run: $GITHUB_RUN_ID"
@@ -246,9 +252,14 @@ jobs:
               echo "::warning::apksigner not found; certificate fingerprint not recorded."
             fi
           } | tee "$OUT"
-          FINGERPRINT=$(grep -i "SHA-256 digest" "$OUT" | head -n 1 | tr -d '\r')
+          FINGERPRINT=""
+          if [[ -s "$OUT" ]]; then
+            FINGERPRINT=$(awk '/SHA-256 digest: /{print; exit}' "$OUT" || true)
+          fi
           if [[ -n "$FINGERPRINT" ]]; then
-            echo "::notice title=Release signer SHA-256::$FINGERPRINT (run $GITHUB_RUN_ID, commit ${GITHUB_SHA:0:7})"
+            echo "::notice title=Release signer SHA-256::${FINGERPRINT} (run $GITHUB_RUN_ID, commit ${GITHUB_SHA:0:7})"
+          else
+            echo "::warning::No SHA-256 certificate fingerprint found in the apksigner output."
           fi
       - name: Upload signed release artifacts
         uses: actions/upload-artifact@v4
