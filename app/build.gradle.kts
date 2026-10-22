@@ -5,6 +5,30 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
+// One stable, owner-controlled sideload identity.
+//
+// The owner creates the keystore OUTSIDE this repository and stores it in the
+// four GitHub Actions secrets named below; CI decodes it to a temporary file and
+// exports ANDROID_KEYSTORE_PATH. When all four are present, BOTH the debug
+// `app-progress-apk` and the signed release are signed with that one key, so every
+// later APK installs as an update over the previous one. No value is ever read
+// from, written to, or committed in this repository.
+//
+// Without the secrets the build still runs (CI must always upload a progress APK)
+// but falls back to AGP's throwaway debug key, which cannot be installed over an
+// owner-key build; the workflow warns loudly in that case.
+val ownerKeystorePath: String? = System.getenv("ANDROID_KEYSTORE_PATH")
+val ownerKeystorePassword: String? = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+val ownerKeyAlias: String? = System.getenv("ANDROID_KEY_ALIAS")
+val ownerKeyPassword: String? = System.getenv("ANDROID_KEY_PASSWORD")
+
+val ownerKeystoreFile = ownerKeystorePath?.let { java.io.File(it) }
+val hasOwnerSigning: Boolean =
+    ownerKeystoreFile?.isFile == true &&
+        !ownerKeystorePassword.isNullOrBlank() &&
+        !ownerKeyAlias.isNullOrBlank() &&
+        !ownerKeyPassword.isNullOrBlank()
+
 android {
     namespace = "io.github.pabi277.dayledger"
     compileSdk = 36
@@ -18,8 +42,31 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        if (hasOwnerSigning) {
+            create("owner") {
+                storeFile = ownerKeystoreFile
+                storePassword = ownerKeystorePassword
+                keyAlias = ownerKeyAlias
+                keyPassword = ownerKeyPassword
+                // The progress APK is a debug variant that the owner sideloads; the
+                // whole point of this config is that it keeps ONE certificate.
+                enableV1Signing = true
+                enableV2Signing = true
+            }
+        }
+    }
+
     buildTypes {
+        debug {
+            if (hasOwnerSigning) {
+                signingConfig = signingConfigs.getByName("owner")
+            }
+        }
         release {
+            if (hasOwnerSigning) {
+                signingConfig = signingConfigs.getByName("owner")
+            }
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

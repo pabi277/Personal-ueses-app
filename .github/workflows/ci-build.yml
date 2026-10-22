@@ -5,11 +5,19 @@
 # downloadable debug APK artifact (`app-progress-apk`): the owner sideloads it
 # to SEE the phase's increment. It is progress, not a release. Signed release
 # artifacts build on main only.
-# Release signing config must read ANDROID_KEYSTORE_PATH plus the four secret
-# environment variables below in Gradle; fail release builds if they are absent.
-# Configure these GitHub Actions secrets; never commit their values:
+#
+# ONE signing identity. The owner creates one keystore OUTSIDE this repository and
+# stores it in the four GitHub Actions secrets named below; Gradle reads
+# ANDROID_KEYSTORE_PATH plus those four values and signs BOTH the progress APK and
+# the signed release with it, so each later APK installs as an update over the
+# previous one instead of needing an uninstall. Configure these secret NAMES and
+# never commit their values:
 # ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS,
 # ANDROID_KEY_PASSWORD.
+# The release job fails hard when any of them is missing. The progress job still
+# builds without them (every phase must upload an APK) but warns that the artifact
+# uses a throwaway debug key, and both jobs print the APK's SHA-256 certificate
+# fingerprint into the log and into the uploaded artifact.
 name: Android CI
 
 on:
@@ -31,6 +39,11 @@ jobs:
   test:
     name: Unit tests, debug build, progress APK
     runs-on: ubuntu-latest
+    env:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -45,6 +58,26 @@ jobs:
           echo "ANDROID_HOME=$ANDROID_HOME"
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
           ls "$ANDROID_HOME/platforms" || true
+      - name: Prepare owner signing key on runner
+        shell: bash
+        run: |
+          set -uo pipefail
+          if [[ -z "${ANDROID_KEYSTORE_BASE64:-}" ]]; then
+            echo "::warning::Owner signing secrets are absent: this app-progress-apk is signed by a throwaway debug key and CANNOT be installed over an owner-key build. Add the four repository secrets named in the workflow header."
+            exit 0
+          fi
+          for name in ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::Missing required Actions secret: $name"
+              exit 1
+            fi
+          done
+          KEYSTORE_PATH="$RUNNER_TEMP/owner-sideload.jks"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+          test -s "$KEYSTORE_PATH"
+          chmod 600 "$KEYSTORE_PATH"
+          echo "ANDROID_KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
+          echo "Owner signing key restored for this run."
       - name: Run unit tests and build debug APK
         run: |
           chmod +x ./gradlew
@@ -56,11 +89,31 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh issue create --repo pabi277/Personal-ueses-app --title "CI build failure" --body "$(tail -n 150 /tmp/build.log)" || true
+      - name: Record APK signing certificate
+        run: |
+          set -uo pipefail
+          APK=$(ls app/build/outputs/apk/debug/*.apk | head -n 1)
+          OUT="$RUNNER_TEMP/signing-certificate.txt"
+          BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* 2>/dev/null | sort -V | tail -n 1)
+          {
+            echo "apk: $(basename "$APK")"
+            echo "workflow run: $GITHUB_RUN_ID"
+            echo "commit: $GITHUB_SHA"
+            if [[ -n "$BUILD_TOOLS" && -x "$BUILD_TOOLS/apksigner" ]]; then
+              "$BUILD_TOOLS/apksigner" verify --print-certs "$APK" 2>&1 | grep -Ei "signer #1 certificate (DN|SHA-256)" || true
+            else
+              echo "::warning::apksigner not found; certificate fingerprint not recorded."
+            fi
+          } | tee "$OUT"
+          # A certificate fingerprint is public information; a keystore value is not.
+          echo "SIGNING_CERT_FILE=$OUT" >> "$GITHUB_ENV"
       - name: Upload progress APK (the downloadable result of this phase)
         uses: actions/upload-artifact@v4
         with:
           name: app-progress-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: |
+            app/build/outputs/apk/debug/*.apk
+            ${{ runner.temp }}/signing-certificate.txt
           if-no-files-found: error
           retention-days: 30
 
@@ -107,6 +160,22 @@ jobs:
         run: |
           chmod +x ./gradlew
           ./gradlew --no-daemon bundleRelease assembleRelease
+      - name: Record release signing certificate
+        run: |
+          set -uo pipefail
+          APK=$(ls app/build/outputs/apk/release/*.apk | head -n 1)
+          OUT="$RUNNER_TEMP/signing-certificate.txt"
+          BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* 2>/dev/null | sort -V | tail -n 1)
+          {
+            echo "apk: $(basename "$APK")"
+            echo "workflow run: $GITHUB_RUN_ID"
+            echo "commit: $GITHUB_SHA"
+            if [[ -n "$BUILD_TOOLS" && -x "$BUILD_TOOLS/apksigner" ]]; then
+              "$BUILD_TOOLS/apksigner" verify --print-certs "$APK" 2>&1 | grep -Ei "signer #1 certificate (DN|SHA-256)" || true
+            else
+              echo "::warning::apksigner not found; certificate fingerprint not recorded."
+            fi
+          } | tee "$OUT"
       - name: Upload signed release artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -114,5 +183,6 @@ jobs:
           path: |
             app/build/outputs/bundle/release/*.aab
             app/build/outputs/apk/release/*.apk
+            ${{ runner.temp }}/signing-certificate.txt
           if-no-files-found: error
           retention-days: 14

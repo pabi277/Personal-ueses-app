@@ -62,18 +62,21 @@ Bootstrapped from AppFlow @ c8856022ca57cdf23ae78b9491481543db89438d on 2026-10-
 
 ### Phase 7 — Data safety and migration foundation (no checklist features)
 
-> 🚧 **Status: BLOCKED at the owner signing gate (2026-10-22).** The signing
-> evidence gate was run first, as required, and failed: progress APKs are signed
-> by an AGP-generated debug key that is recreated on every runner (no
-> `signingConfigs` in `app/build.gradle.kts:8–39`, no keystore restore in
-> `.github/workflows/ci-build.yml:29–66`), the main release job still fails on the
-> missing name `ANDROID_KEYSTORE_BASE64` (run `39771615912`), and no artifact
-> fingerprint could be inspected because artifact downloads are blocked here.
-> No implementation code, workflow or Gradle signing change was made. Evidence and
-> the owner's one-key setup plan are in
+> 🚧 **Status: IN PROGRESS — signing gate answered, data rescue still open
+> (2026-10-22).** The gate was run first and failed: progress APKs were signed by
+> an AGP-generated debug key recreated on every runner (no `signingConfigs`, no
+> keystore restore), and the main release job still fails on the missing name
+> `ANDROID_KEYSTORE_BASE64` (run `39771615912`); no artifact fingerprint could be
+> inspected because artifact downloads are blocked here. The owner then answered
+> the gate — data **valuable**, one owner-controlled identity **approved** — so the
+> signing plumbing was wired (Gradle `owner` signing config used by **both** debug
+> and release, a runner keystore restore, and an `apksigner` SHA-256 fingerprint in
+> the log and artifact). That wiring proves nothing until the owner adds the four
+> secret **names** and two runs show the same fingerprint. Because the installed
+> data is valuable and the first owner-key install needs one uninstall, Phase 7
+> feature code (7.1–7.4) is deliberately held until the owner's ADB database rescue
+> is verified. Evidence, the rescue steps and the owner's setup plan are in
 > [`docs/phases/07-data-safety-migration.md`](phases/07-data-safety-migration.md).
-> Phase 7 resumes only after the owner answers the gate and supplies the installed
-> data's value.
 
 #### Historical Room inventory (verified from Git history, 2026-10-22)
 

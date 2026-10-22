@@ -130,19 +130,22 @@
   placeholder). Room is v5 with `exportSchema = false` and destructive fallback;
   Android OS-backup exclusion is not implemented. Phase 7 must close these gaps
   before any checklist schema change.
-- Signing audit status (2026-10-22, updated with the Phase 7 gate evidence): the
-  current `main` tip run `39771615912` again fails `Signed release AAB and APK` at
-  `Prepare signing key on runner` with `Missing required Actions secret:
-  ANDROID_KEYSTORE_BASE64`; the loop exits at the first empty name, so only that
-  one name is proven absent. `app/build.gradle.kts` has no `signingConfigs` at all,
-  so nothing reads the four secret names and `assembleRelease` would emit an
-  unsigned APK even with all secrets present. The progress APK has no keystore
-  restore step, so each fresh runner generates a new debug key — the design is
-  unstable by construction, not merely unproven. Artifact archives still cannot be
-  downloaded here (`*.blob.core.windows.net` is outside the allowlist; `gh run
-  download` and `curl` both fail), so no certificate fingerprint is known. Phase 7
-  is therefore stopped at the owner signing gate; see
-  `docs/phases/07-data-safety-migration.md`.
+- Signing status (2026-10-22, Phase 7 gate): the gate failed on evidence — the
+  progress APK was signed by an AGP-generated debug key recreated on every runner
+  (no keystore restore, no `signingConfigs`), and `main` run `39771615912` failed
+  with `Missing required Actions secret: ANDROID_KEYSTORE_BASE64` (only that name
+  is proven absent; the loop exits at the first empty one). Artifact downloads are
+  still blocked here (`*.blob.core.windows.net`), so no fingerprint is known. The
+  owner answered the gate: data is **valuable** and one owner-controlled identity
+  is **approved**. Round 2 therefore wired the plumbing only — an `owner`
+  `signingConfigs` entry used by **both** debug and release, gated on
+  `ANDROID_KEYSTORE_PATH` plus the four secret names, a runner keystore restore in
+  both jobs, and an `apksigner` SHA-256 certificate fingerprint written to the log
+  and the artifact (fingerprints are public; keystore values are not). No Phase 7
+  feature code was written: with valuable installed data, the first owner-key
+  install needs one uninstall, so an ADB `run-as` database rescue must be verified
+  first (`docs/phases/07-data-safety-migration.md` §6b). Update-over-install is
+  **not** yet proven, and the two-run fingerprint comparison is still owed.
 
 - Owner-local setup remains optional and on-device: enabled domains, timetable,
   app lists, reminder windows and routines are not committed or asked as a blocking
@@ -156,18 +159,16 @@
 1. Read `docs/REQUIREMENTS.md`, `docs/ROADMAP.md`, `docs/DECISIONS.md`,
    `docs/UI_DESIGN.md` and the latest `docs/phases/` record — trust the repo, not
    memory. Ask nothing that is already recorded.
-2. Phase 7 (data safety and migration foundation) is owner-authorised but
-   **blocked at its signing evidence gate**: progress APKs are signed by a
-   per-runner throwaway debug key, the release job is missing
-   `ANDROID_KEYSTORE_BASE64` and Gradle has no `signingConfigs`. Do not write
-   Phase 7 implementation code, and do not change workflow/Gradle signing, until
-   the owner answers the gate in `docs/phases/07-data-safety-migration.md` §7:
-   (a) the device update-over-install result with both run IDs, (b) whether the
-   installed data is disposable, valuable or absent, and (c) approval of the
-   single owner-controlled signing identity (four secret **names**
-   `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`,
-   `ANDROID_KEY_PASSWORD`; values are the owner's alone). Keep the full device
-   matrix at Phase 15 and preserve P0 before Phase 8.
+2. Phase 7 is **in progress but feature code has not started.** The signing gate
+   is answered (data valuable, identity approved) and the signing plumbing is
+   wired. Before Phase 7 parts 7.1–7.4 begin, the owner must: create the keystore
+   outside the repo, add the four secret **names**
+   (`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`,
+   `ANDROID_KEY_PASSWORD`; values his alone), and complete the ADB `run-as`
+   database rescue in `docs/phases/07-data-safety-migration.md` §6b **before** any
+   owner-key APK is installed, because that first install needs one uninstall and
+   that data is valuable. Never ask for secret values. Keep the full device matrix
+   at Phase 15 and preserve P0 before Phase 8.
 3. End each implementation phase with CI green and its `app-progress-apk`; the
    owner installs it and records a short smoke check plus the phase-specific
    evidence in the phase record. Update roadmap/prompt and stop at the merge gate.

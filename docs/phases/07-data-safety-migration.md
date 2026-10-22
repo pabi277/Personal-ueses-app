@@ -1,26 +1,24 @@
 # Phase 07 — Data safety and migration foundation
 
-- Status: 🚧 **BLOCKED at the owner signing gate** · Date: 2026-10-22 ·
-  Branch: `arena/0276c412-personal-ueses-app`
+- Status: 🚧 **IN PROGRESS — signing gate answered, data-rescue conflict still
+  open** · Date: 2026-10-22 · Branch: `arena/0276c412-personal-ueses-app`
 - Base: `main` @ `8070713` (merge commit of PR #11)
-- **No implementation code was written in this round.** The signing gate in
-  `docs/ROADMAP.md` ("Signing-continuity audit status") is unresolved, so the
-  phase stops here and waits for the owner's answer. Nothing in
-  `.github/workflows/ci-build.yml`, `app/build.gradle.kts`, the manifest, the
-  Room classes or the source tree has been changed.
+- Round 1 (evidence only) wrote no code. Round 2 wires the owner-approved signing
+  identity (§8) — the one change the gate authorised — and **still writes no Phase 7
+  feature code**, because the owner's answer made the installed data *valuable* and
+  the first install on the new identity would destroy it (§6a).
 
-## 1. Owner inputs this gate needs (not supplied yet)
+## 1. Owner inputs for this gate — answered 2026-10-22
 
-The authorization message left both owner-evidence fields as unfilled
-placeholders:
+| Gate input | Owner's answer |
+|---|---|
+| State of the data in the currently installed build | **Valuable — do not lose it** |
+| Approval of one owner-controlled signing identity | **Approved — wire it** (four secret names, values only the owner's) |
+| Owner-device signing/update test with both run IDs | not provided (the gate did not need it once the design was proven unstable) |
 
-| Gate input | What arrived | Consequence |
-|---|---|---|
-| Owner-device signing/update test (two run IDs + result) | placeholder text, no run IDs, no result | Device-side update-over-install evidence is **absent** |
-| State of the data in the currently installed build | placeholder (disposable / valuable / not installed) | Must be assumed **valuable**, per `rule.md` §5 "History is sacred" |
+The two answers are consistent only if the identity change is **staged behind a
+data rescue** — see §6a. That is why implementation code still has not started.
 
-Neither can be inferred from the repository, and `rule.md` §3 forbids treating a
-guess as a gate answer. The owner answers below (§7) are the unblocking step.
 
 ## 2. Gate step 1 — main contains the merged PR #11 documentation — ✅ verified
 
@@ -145,11 +143,10 @@ established.** The exhaustive-loop `for name in ...` check means the only proven
 fact about the release secrets is that `ANDROID_KEYSTORE_BASE64` is absent.
 `docs/ROADMAP.md` requires a stop at the owner gate in exactly this situation.
 
-## 6. Gate step 7 — data conflict, stated explicitly
+## 6. Gate step 7 — data conflict, stated explicitly (⚠️ STOP condition met)
 
-Because the owner's data-value answer was a placeholder, this record assumes the
-installed data is **valuable** (`rule.md` §5). On that assumption there is a real
-conflict:
+The owner has now confirmed the installed data is **valuable — do not lose it**.
+That turns the assumption below into the recorded fact, and the conflict stands:
 
 - The one-time uninstall needed to adopt a stable key **deletes**
   `/data/data/io.github.pabi277.dayledger/`, including
@@ -164,30 +161,81 @@ conflict:
   loss unless it is rescued out of the device first.** That rescue has not been
   attempted, agreed or proven, so it is not assumed to work.
 
-One possible rescue route exists and must be agreed and tested before any
-uninstall, never after: the installed CI artifact is a **debug** build, so a PC
-with platform-tools can copy the database out of the app's private directory with
-`adb shell run-as io.github.pabi277.dayledger` (no root, no repo secret). That
-route needs USB debugging, a PC, and a verification step that the copied
-`dayledger.db` actually opens. It is **not** a substitute for Phase 7's versioned
-SAF backup, and it is not authorised by this record.
+One possible rescue route exists and must be tested **before** any uninstall,
+never after: the installed CI artifact is a **debug** build, so a PC with
+platform-tools can copy the database out of the app's private directory with
+`adb shell run-as io.github.pabi277.dayledger` (no root, no repository secret).
+It is **not** a substitute for Phase 7's versioned SAF backup.
 
-## 7. What the owner must answer (gate) — nothing else blocks the phase
+### 6a. The staged order this record now follows
 
-1. The two missing owner inputs (device update-over-install result with both run
-   IDs; and whether the installed data is disposable, valuable or absent).
-2. Approval, or rejection, of the single owner-controlled signing identity in §8.
+1. Signing plumbing is wired (done in round 2, §8b). It changes nothing on the
+   phone until an APK built with the owner key is installed.
+2. The owner creates the keystore outside the repository and adds the four secret
+   names (§8).
+3. **Data rescue (§6b) — before any install of an owner-key APK.**
+4. Only then: one uninstall, install the owner-key `app-progress-apk`, and the
+   update-over-install proof becomes possible (Phase 7 part 7.5).
+5. Phase 7 parts 7.1–7.4 (schema export, migrations, SAF backup/restore, OS-backup
+   exclusion) are implemented and tested, and the owner's smoke check is recorded
+   in §10 with CI evidence kept separate from device evidence.
 
-Phase 7 implementation does not start until those answers arrive.
+Installing an owner-key APK before step 3 is the single action that loses the
+owner's data; it is not taken or recommended by this record.
+
+### 6b. Rescue procedure (owner-run, PC, ~10 minutes)
+
+The build currently installed is a CI **debug** artifact, which is what makes this
+possible. It must be done **while the old build is still installed**.
+
+1. On the phone: Settings → About phone → tap *Build number* seven times → back →
+   System → Developer options → enable **USB debugging**. Connect USB, choose
+   *File transfer*.
+2. On the PC, install Android platform-tools, then confirm the device is visible:
+   `adb devices` (accept the *Allow USB debugging?* prompt on the phone).
+3. Confirm the private directory is reachable (this proves the build is debug):
+   `adb shell run-as io.github.pabi277.dayledger ls -l databases`
+4. Copy the database out, to the PC, and keep the file somewhere private (not in
+   this repository):
+   `adb exec-out run-as io.github.pabi277.dayledger cat databases/dayledger.db > dayledger-rescue.db`
+   then the write-ahead log if it exists:
+   `adb exec-out run-as io.github.pabi277.dayledger cat databases/dayledger.db-wal > dayledger-rescue.db-wal` (an error here only means the file is absent).
+5. Verify before trusting it: the file should be several KB and start with
+   `SQLite format 3`. Locally, `sqlite3 dayledger-rescue.db ".tables"` should list
+   `app_usage`, `categories`, `blocks`, `earnings`, `learning` and the rest.
+   Optionally past a hash so the copy can be proven later.
+6. Report the verified result in chat. **Do not uninstall yet** — the install step
+   comes after I have confirmed the Phase 7 restore path can read that file.
+
+The rescued `.db` is a raw Room database, not the versioned backup Phase 7 will
+produce; it will be re-imported through the new restore path (or copied back with
+the same `run-as` route on a debug build) after the reinstall.
+
+## 7. Gate status and the owner's next actions
+
+Gate answered: data **valuable**, signing identity **approved**. What is left is
+mechanical, and only the owner can do it:
+
+1. Create the keystore outside the repository (§8a Step A).
+2. Add the four repository **secrets by name** in GitHub (§8a Step B) and say only
+   *"secrets added"* in chat — never the values.
+3. Run the §6b rescue and report the verified result.
+4. Say *go* for the uninstall/reinstall once the rescue is verified.
+
+Phase 7 feature code (7.1–7.4) starts after step 3's rescue is confirmed, so the
+first owner-key APK the owner installs already carries the migration and backup
+work rather than a build he has to install twice.
 
 ## 8. Owner setup plan — one stable, owner-controlled personal sideload identity
 
 Phone-friendly. Secret **names** only; values never appear here, in a commit, or
-in chat. This plan is **not executed yet** and changes no workflow or Gradle file
-in this round.
+in chat.
 
-**What is wrong today, in one line:** every CI run invents a throwaway signing key,
-so each APK is a different app to Android — that is why an update fails.
+**What was wrong before round 2, in one line:** every CI run invented a throwaway
+signing key, so each APK was a different app to Android — that is why an update
+fails.
+
+### 8a. What the owner does (steps A–D unchanged by round 2)
 
 **Step A — make the key on your own PC once (never on GitHub, never in the repo).**
 
@@ -217,12 +265,10 @@ no new name has to be invented):
 | `ANDROID_KEY_ALIAS` | `dayledger-owner` |
 | `ANDROID_KEY_PASSWORD` | the key password chosen in Step A |
 
-Tell me only that the four names exist — never the values. I will then (after
-your go-ahead) wire a real `signingConfigs` block in `app/build.gradle.kts`, add a
-keystore-restore step to **both** the progress job and the release job, and add a
-CI step that prints the APK's SHA-256 certificate fingerprint with
-`apksigner verify --print-certs`. A certificate fingerprint is public information
-and is the evidence that later runs really are signed by the same key.
+Tell me only that the four names exist — never the values. The wiring that reads
+them already landed in round 2 (§8b), so the next push after you add them will
+sign the progress APK and the release with your key and print the certificate
+fingerprint in the log and in the artifact.
 
 **Step C — one final uninstall/reinstall: yes, exactly once.**
 Needed only if a build of this app is currently installed from an older CI run,
@@ -251,6 +297,40 @@ no export inside that build (see §6). Options, in order of safety:
 secret value is requested or stored, and the signed-release path is **not** retired
 — it stays in the workflow and simply starts working once the same four secrets
 exist and Gradle reads them.
+
+### 8b. What round 2 wired (signing plumbing only)
+
+Gradle (`app/build.gradle.kts`):
+
+- A `signingConfigs` entry named `owner` is created **only** when
+  `ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and
+  `ANDROID_KEY_PASSWORD` are all present and the keystore file exists. It is
+  applied to **both** `debug` and `release`, which is what makes the sideloaded
+  progress APK and the release share one certificate.
+- When the secrets are absent the file falls back to AGP's default debug key, so
+  CI still produces a progress APK; that state is now loudly labelled instead of
+  silent (§8b workflow).
+
+Workflow (`.github/workflows/ci-build.yml`):
+
+- The `test` job gains a `Prepare owner signing key on runner` step that decodes
+  the base64 secret to `$RUNNER_TEMP/owner-sideload.jks` (mode 600) and exports
+  `ANDROID_KEYSTORE_PATH`. With no secret it emits an explicit
+  `::warning::` that this APK is throwaway-key signed and **cannot** be installed
+  over an owner-key build; with a partial set it fails with the missing **name**.
+- Both jobs gain `Record APK signing certificate`, which runs
+  `apksigner verify --print-certs` and writes the signer DN and **SHA-256
+  fingerprint** to the log and to `signing-certificate.txt` inside the uploaded
+  artifact. A fingerprint is public information; a keystore value is not.
+- The `signed-release` job keeps its hard failure when any of the four names is
+  missing, so a release can never be produced with a throwaway key.
+- Header comment rewritten to describe the one-identity rule and the names only.
+
+**What this cannot prove yet:** with no secrets in the repository, the current run
+still signs with a throwaway key and prints *that* fingerprint. Stability is proven
+only by two runs **after** the owner adds the secrets showing the same SHA-256
+fingerprint — that is the evidence this gate needs, and it is recorded here when it
+exists.
 
 ## 9. Phase 7 work held back (nothing started)
 
