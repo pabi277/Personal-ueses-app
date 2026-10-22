@@ -68,8 +68,10 @@ Bootstrapped from AppFlow @ c8856022ca57cdf23ae78b9491481543db89438d on 2026-10-
 > the release job was missing the name `ANDROID_KEYSTORE_BASE64`. The owner answered
 > the gate (data **valuable**, one owner-controlled identity **approved**), so the
 > signing plumbing is wired — one `owner` signing config used by **both** debug and
-> release, a runner keystore restore, and an `apksigner` SHA-256 fingerprint in the
-> log and artifact — and Phase 7's data-safety work was then built entirely in CI:
+> release, a runner keystore restore, and the signer's SHA-256 certificate fingerprint
+> published as a per-run artifact name (measured: two runs of the same tree produced
+> **different** fingerprints, `DC13157E…` vs `B988DBD3…`, proving the throwaway-key
+> defect) — and Phase 7's data-safety work was then built entirely in CI:
 > Room v5 schema export, explicit non-destructive `1→2→3→4→5` migrations (no version
 > bump, destructive fallback removed), versioned SAF backup/restore for every table
 > and setting, and `allowBackup="false"` plus legacy/API-31 extraction rules verified

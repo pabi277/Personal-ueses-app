@@ -144,6 +144,28 @@ established.** The exhaustive-loop `for name in ...` check means the only proven
 fact about the release secrets is that `ANDROID_KEYSTORE_BASE64` is absent.
 `docs/ROADMAP.md` requires a stop at the owner gate in exactly this situation.
 
+## 5a. Measured proof of instability (2026-10-22, two runs, same tree)
+
+The earlier sections argued instability from configuration. It is now measured. CI
+publishes the APK's signer fingerprint as an artifact **name**
+(`signer-<first 24 hex of the certificate SHA-256>`, falling back to `signer-unknown`),
+which is readable through the API without downloading anything:
+
+| Run | Commit | Signer artifact | Certificate SHA-256 (first 24 hex) |
+|---|---|---|---|
+| `39804639332` | `1beb4d5` | `signer-DC13157ECCF809111C72F888` | `DC13157ECCF809111C72F888…` |
+| `39805057123` | `342db50` (same tree, empty commit) | `signer-B988DBD3452E29EAD4C1CBFE` | `B988DBD3452E29EAD4C1CBFE…` |
+
+**Different certificates for the same code.** That is the defect in one line: each
+runner generates its own debug key, so no APK can install over the previous one. It also
+gives the gate its comparison method — after the owner adds the four secrets, two runs
+must produce the **same** `signer-…` name, and that is the stability evidence.
+
+Getting this to work took four attempts, each recorded for the next round: `::notice::`
+annotations are not retrievable through this API (`signer-unknown`), apksigner is absent
+on the runner image, `keytool -printcert -jarfile` had nothing to read because minSdk 26
+made AGP sign v2-only, and only Gradle's `signingReport` produced a real fingerprint.
+
 ## 6. Gate step 7 — data conflict, stated explicitly (⚠️ STOP condition met)
 
 The owner has now confirmed the installed data is **valuable — do not lose it**.
@@ -446,6 +468,7 @@ flags on every run.
 | `room-schema` | id `12425352488`, 1,805 bytes, `sha256:aab9e1e6…48fd6d` (`5.json`) |
 | Signed release job | skipped (branch build; main only) |
 | Expected annotation | owner signing secrets still absent — the APK is throwaway-key signed |
+| Signer evidence | `signer-DC13157EC…` (run `39804639332`) vs `signer-B988DBD3…` (run `39805057123`) — **different**, see §5a |
 
 Two failed runs preceded it and are kept as evidence: `39776380281` (first attempt,
 schema-matrix assertion) and `39776972220` (same test after diagnostics were added).
