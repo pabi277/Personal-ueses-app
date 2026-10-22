@@ -280,12 +280,20 @@ class MigrationTest {
                     "createdAt|INTEGER|1|0")
             )
 
+            // Report every difference in one go: a single CI run then shows the
+            // complete picture instead of one table at a time.
+            val problems = ArrayList<String>()
             expected.forEach { (table, columns) ->
-                val actual = it.columns(table)
-                val actualList = actual.entries.map { (name, spec) -> "$name|$spec" }
-                assertEquals("schema of $table", columns, actualList)
+                val actualList = it.columns(table).entries.map { (name, spec) -> "$name|$spec" }
+                if (actualList != columns) {
+                    problems.add("table $table\n  expected: ${columns.joinToString(", ")}\n  actual:   ${actualList.joinToString(", ")}")
+                }
             }
-            assertEquals("no unexpected tables", expected.keys, it.tableNames().toSet())
+            val actualTables = it.tableNames().toSet()
+            if (actualTables != expected.keys) {
+                problems.add("tables\n  expected: ${expected.keys.sorted()}\n  actual:   ${actualTables.sorted()}")
+            }
+            assertTrue("schema drift from the v5 entities:\n" + problems.joinToString("\n"), problems.isEmpty())
         }
     }
 

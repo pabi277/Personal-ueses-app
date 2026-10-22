@@ -88,7 +88,22 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh issue create --repo pabi277/Personal-ueses-app --title "CI build failure" --body "$(tail -n 150 /tmp/build.log)" || true
+          {
+            echo "## Build log tail"
+            echo '```'
+            tail -n 100 /tmp/build.log || true
+            echo '```'
+            echo "## Failing unit tests (name + first lines of the failure)"
+            echo '```'
+            for f in app/build/test-results/testDebugUnitTest/*.xml; do
+              [ -f "$f" ] || continue
+              grep -o 'testcase name="[^"]*"' "$f" | sed 's/testcase name=//' | head -60 || true
+              sed -n '/<failure/,/<\/failure>/p' "$f" | head -80 || true
+              sed -n '/<error/,/<\/error>/p' "$f" | head -40 || true
+            done
+            echo '```'
+          } > /tmp/report.md
+          gh issue create --repo pabi277/Personal-ueses-app --title "CI build failure" --body-file /tmp/report.md || true
       - name: Record APK signing certificate
         run: |
           set -uo pipefail
