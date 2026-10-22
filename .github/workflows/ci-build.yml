@@ -95,18 +95,39 @@ jobs:
           # and this distinguishes a truncated paste from a wrong password.
           echo "::warning title=keystore file::type=$TYPE bytes=$(wc -c < "$KEYSTORE_PATH") base64chars=${#ANDROID_KEYSTORE_BASE64}"
 
-          if ! keytool -list -keystore "$KEYSTORE_PATH" -storepass "$ANDROID_KEYSTORE_PASSWORD" > "$RUNNER_TEMP/kt.txt" 2>"$RUNNER_TEMP/kt.err"; then
-            echo "::error::ANDROID_KEYSTORE_PASSWORD does not open the keystore (or the file is corrupt). Fix the secret, nothing else."
-            sed -E 's/password[^,]*/password ***/g' "$RUNNER_TEMP/kt.err" | head -n 5
+          # A password pasted in a browser field very often carries a trailing
+          # newline or space. Try the secret exactly as stored, then the trimmed
+          # form; if only the trimmed form works, use it and say so, instead of
+          # failing on an invisible character. No value is ever printed.
+          STORE_PASS_RAW="$ANDROID_KEYSTORE_PASSWORD"
+          STORE_PASS_TRIMMED=$(printf '%s' "$ANDROID_KEYSTORE_PASSWORD" | tr -d '\r\n' | sed -E 's/[[:space:]]+$//')
+          if keytool -list -keystore "$KEYSTORE_PATH" -storepass "$STORE_PASS_RAW" > "$RUNNER_TEMP/kt.txt" 2>"$RUNNER_TEMP/kt.err"; then
+            STORE_PASS="$STORE_PASS_RAW"
+          elif keytool -list -keystore "$KEYSTORE_PATH" -storepass "$STORE_PASS_TRIMMED" > "$RUNNER_TEMP/kt.txt" 2>"$RUNNER_TEMP/kt.err"; then
+            STORE_PASS="$STORE_PASS_TRIMMED"
+            HAS_CRLF=no
+            printf '%s' "$ANDROID_KEYSTORE_PASSWORD" | grep -q $'\r' && HAS_CRLF=yes
+            echo "::warning title=ANDROID_KEYSTORE_PASSWORD has stray whitespace::the secret works only after trimming (length ${#STORE_PASS_RAW} -> ${#STORE_PASS}; carriage return present: $HAS_CRLF). Signing continues with the trimmed value. Re-set the secret with: printf '%s' \"<password>\" | gh secret set ANDROID_KEYSTORE_PASSWORD"
+          else
+            echo "::error::ANDROID_KEYSTORE_PASSWORD does not open the keystore, even after trimming whitespace. The keystore itself is fine (size/type above), so either the password in the secret is not the one used when the key was created, or the base64 secret is from a different keystore. Verify locally: keytool -list -keystore ~/dayledger-owner.jks"
+            sed -E 's/password[^,]*/password ***/g' "$RUNNER_TEMP/kt.err" | head -n 5 || true
             exit 1
           fi
-          if ! grep -Fq "$ANDROID_KEY_ALIAS" "$RUNNER_TEMP/kt.txt"; then
+          if ! grep -Fq "$(printf '%s' "$ANDROID_KEY_ALIAS" | tr -d '\r\n' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')" "$RUNNER_TEMP/kt.txt"; then
             echo "::error::ANDROID_KEY_ALIAS is not an alias inside this keystore. The aliases it contains (names only):"
             grep -E "^[^ ].*," "$RUNNER_TEMP/kt.txt" | sed -E 's/,.*//' | sed 's/^/  - /' || true
             exit 1
           fi
-          if ! keytool -certreq -keystore "$KEYSTORE_PATH" -storepass "$ANDROID_KEYSTORE_PASSWORD" \
-                 -alias "$ANDROID_KEY_ALIAS" -keypass "$ANDROID_KEY_PASSWORD" -file "$RUNNER_TEMP/req.csr" >/dev/null 2>"$RUNNER_TEMP/kt2.err"; then
+          KEY_PASS_TRIMMED=$(printf '%s' "$ANDROID_KEY_PASSWORD" | tr -d '\r\n' | sed -E 's/[[:space:]]+$//')
+          ALIAS_TRIMMED=$(printf '%s' "$ANDROID_KEY_ALIAS" | tr -d '\r\n' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')
+          if keytool -certreq -keystore "$KEYSTORE_PATH" -storepass "$STORE_PASS" \
+                 -alias "$ALIAS_TRIMMED" -keypass "$ANDROID_KEY_PASSWORD" -file "$RUNNER_TEMP/req.csr" >/dev/null 2>"$RUNNER_TEMP/kt2.err"; then
+            KEY_PASS="$ANDROID_KEY_PASSWORD"
+          elif keytool -certreq -keystore "$KEYSTORE_PATH" -storepass "$STORE_PASS" \
+                 -alias "$ALIAS_TRIMMED" -keypass "$KEY_PASS_TRIMMED" -file "$RUNNER_TEMP/req.csr" >/dev/null 2>"$RUNNER_TEMP/kt2.err"; then
+            KEY_PASS="$KEY_PASS_TRIMMED"
+            echo "::warning title=ANDROID_KEY_PASSWORD has stray whitespace::the secret works only after trimming; signing continues with the trimmed value."
+          else
             echo "::error::ANDROID_KEY_PASSWORD does not unlock ANDROID_KEY_ALIAS. If you pressed Enter when creating the key, the key password equals the store password; otherwise use the key password you typed."
             head -n 3 "$RUNNER_TEMP/kt2.err" | sed -E 's/password[^,]*/password ***/g' || true
             exit 1
@@ -114,6 +135,12 @@ jobs:
           rm -f "$RUNNER_TEMP/kt.txt" "$RUNNER_TEMP/kt.err" "$RUNNER_TEMP/kt2.err" "$RUNNER_TEMP/req.csr"
           echo "Owner signing key verified: store password ok, alias found, key password ok."
           echo "ANDROID_KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
+          # Gradle signs with the values that were proven to work above.
+          {
+            printf 'ANDROID_KEYSTORE_PASSWORD=%s\n' "$STORE_PASS"
+            printf 'ANDROID_KEY_ALIAS=%s\n' "$ALIAS_TRIMMED"
+            printf 'ANDROID_KEY_PASSWORD=%s\n' "$KEY_PASS"
+          } >> "$GITHUB_ENV"
       - name: Run unit tests and build debug APK
         run: |
           chmod +x ./gradlew
