@@ -3,33 +3,61 @@
 # Day Ledger — continuation prompt
 
 > **Self-contained handoff. Paste this file as the first message of the next chat,
-> then give one command** (e.g. `start phase 0` or a bug report).
+> then give one command** (e.g. start the separately authorized phase or report a
+> bug; do not re-ask the closed owner gates).
 > This repo is self-contained: `rule.md` holds the full rules, `docs/` the plan,
 > the spec and the decisions, THIS FILE the living state. AppFlow is provenance
 > only — nothing here depends on it. Update this file at the end of every phase, in
 > the same commit as the phase record.
 
-## Identity (fixed)
+## Identity and product direction
 
-- App: **Day Ledger** (working name) · package: **`io.github.pabi277.dayledger`**
-  (permanent once published) · license: **MIT** (owner, 2026-10-15)
-- What it is: a **personal-use, single-user, offline, English-only**
-  time-efficiency app for the owner's own day — per-app usage insight
-  (device-reported), sweet customizable notifications, a home-screen widget
-  readable **without opening the app**, planned 24-hour blocks with a **Tomorrow
-  plan**, app limits with **customizable block durations**, an offerwall earnings
-  log (~₹12.50 per install) with real ₹/hour attribution, and a daily learning
-  streak. No account, no backend, no ads, no analytics, no store listing.
-- **The spec is `docs/REQUIREMENTS.md`** (the owner's own words, his day-in-the-life,
-  and R1–R34 with acceptance tests). Read it before proposing any feature; nothing
-  is built that is not in it.
-- Official Play title: Not set — and not applicable: publishing was cancelled by
-  the owner on 2026-10-15.
-- Provenance: bootstrapped from AppFlow @
+- **Current visible label:** Day Ledger. **Approved future visible label:** Daily
+  Logger, introduced with the Phase 8 checklist front door; the current APK is not
+  renamed. Package/database identity stays **`io.github.pabi277.dayledger`** and
+  license stays MIT.
+- Evolve this same app into the owner-approved Daily Logger / external brain, not
+  a separate checklist app. The approved UI hybrid is Today = Command Center
+  Checklist, Plan/Tomorrow = timeline, Focus = One Thing; primary navigation is
+  Today · Plan · Habits · Review · More. Usage is supporting Phone evidence, not
+  the Today hero. Existing Usage, Earn, Learn, Limits, Categories, Notifications
+  and Settings remain reachable.
+- Reminder defaults are approved and editable: Core every 20 minutes per
+  occurrence, max four sound/vibration fires per occurrence subject to a separate
+  daily Core cap, then silent ongoing/widget visibility; Standard initial +
+  one repeat after 45–60 minutes; Flexible one gentle reminder or digest. Quiet
+  hours are no-fire; global Pause preserves due state until resume; Less Often is
+  scoped; separate daily Core/general checklist caps do not reuse R12's usage cap.
+- Android OS cloud backup and device-to-device transfer must exclude the database
+  and all app-private data. The only backup is an explicitly user-exported SAF
+  file. Phase 7 must implement and verify the Android backup/data-extraction rules;
+  this is not the current build's behavior.
+- Invariants remain: one user, offline, English-only, no account/backend/ads/
+  analytics, no Play Store path, no new permissions without a gate. Starter content,
+  examples and tests must be generic/fictional; never commit owner timetable,
+  routines, profile or financial details.
+- `docs/REQUIREMENTS.md` preserves R1–R34 and P0–P3 and now contains DL1–DL28 with
+  priorities, R-ID mappings and acceptance tests. Read it with the approved
+  [`docs/UI_DESIGN.md`](docs/UI_DESIGN.md) and `docs/ROADMAP.md` before work.
+- The repository remains **public** under its current name; no repository rename
+  is authorized. No fixed calendar deadline applies to proposed Phases 7–15; the
+  historical four-week statement applies only to Phases 0–4. MVP is Phases 7–10,
+  then a 14-day real-use gate before Phase 11. Work one owner-approved phase per
+  chat.
+- The full device matrix remains Phase 15. P0 still gates Phase 8. Every
+  implementation phase also requires an owner APK install and a short recorded
+  smoke check. This documentation closure does not start Phase 7.
+- Signing continuity remains **unknown**: progress artifacts for runs
+  `39766581703` and `39766005737` could not be downloaded in this environment;
+  the main signed-release attempt `38845505942` failed during signing-key setup
+  and no signed-release artifact was found. Do not promise update-over-install or
+  rotate signing until evidence is available; see the Phase 7 owner gate in the
+  roadmap. Secret names only; never copy values.
+- Provenance: AppFlow @
   `c8856022ca57cdf23ae78b9491481543db89438d` (reference only — this repo is
   self-contained).
-- Git author: designated in `docs/DECISIONS.md` · session branch: arena/be850e43-personal-ueses-app ·
-  never push `main`.
+- Git author: designated in `docs/DECISIONS.md` · session branch: use the branch
+  assigned by Arena; never create/switch branches or push `main`.
 
 ## Rules digest (full rules: `./rule.md` in THIS repo — self-contained)
 
@@ -38,12 +66,14 @@
 - Never create/switch branches, push `main`, force-push, or `reset --hard`.
 - No PR, merge, release, publish or deploy without my explicit command in chat.
   Green CI is not authorization.
-- **Ask less, gate always** (`rule.md` §3): GATE items are asked once, in one
-  Summary batch. DECIDE-ONCE answers live in `docs/DECISIONS.md` and are **never
-  re-asked** — direction (personal-use time app), English-only, no ads, 4 weeks and
-  the core-first scope cut were all answered on 2026-10-15. The six owner-only
-  inputs in `docs/REQUIREMENTS.md` §12 are **not** a question batch: use the
-  documented default, log it as reversible, let the owner correct it any time.
+- **Ask less, gate always** (`rule.md` §3): GATE items are asked once in a
+  Summary batch. The 2026-10-15 language, no-ads, personal-use and package
+  decisions remain closed. The 2026-10-22 label timing, UI, reminder defaults,
+  OS-backup exclusion, public repository/no-rename decision, no-fixed-deadline
+  scope and Phase 15 device ordering are answered in `docs/DECISIONS.md`; do not
+  re-ask them. Agree measurable criteria for the 14-day post-Phase-10 use gate
+  before that trial begins. Owner-local routine details are entered on-device, not
+  asked as a blocker.
 - Invariants that are easy to break by accident: the **fixed permission set**
   (`PACKAGE_USAGE_STATS`, `QUERY_ALL_PACKAGES`, `POST_NOTIFICATIONS`, exact alarms,
   boot, and Accessibility + overlay **for phase-4 blocking only**) — nothing else,
@@ -84,26 +114,46 @@
   See `docs/phases/05-earnings-learning.md`.
 - **Phase 6 ✅ — Review + durability** (2026-10-15). Weekly report, shift-my-day, CSV export, settings. CI run 38756961555 green.
   See `docs/phases/06-review-durability.md`.
-- Next: run kill tests P0–P3 on the owner's device.
+- The 2026-10-22 phase plan places the full device-validation phase last
+  (Phase 15). Phase 7 is data-safety/migration readiness; the existing P0
+  real-device usage check remains a hard pre-feature gate before Phase 8.
+- The 2026-10-22 product and delivery gates are closed. This documentation
+  closure is documentation-only and does **not** start Phase 7. After the docs
+  merge gate and separate owner authorization, work on Phase 7 only; do not
+  implement checklist features before its migration, backup and signing/install
+  acceptance is met.
+- The Phase 10 MVP use-gate is a separate 14-day real-use trial before Phase 11;
+  agree measurable criteria before that trial. It does not replace original P0–P3.
+- Current-source audit: Phase 6's backup/restore claim is not demonstrated by the
+  tree (`MainActivity.kt` backup callback is empty and its CSV output is a
+  placeholder). Room is v5 with `exportSchema = false` and destructive fallback;
+  Android OS-backup exclusion is not implemented. Phase 7 must close these gaps
+  before any checklist schema change.
+- Signing audit status (2026-10-22): progress artifact metadata for runs
+  `39766581703` and `39766005737` is available, but archive downloads were blocked
+  by the sandbox's outbound-host allowlist, so certificate fingerprints are
+  unknown. Main run `38845505942` failed at signing-key preparation; no accessible
+  main signed-release artifact was found. Do not claim signing stability. If it is
+  unknown or unstable in Phase 7, stop at the owner gate and use secret names only.
 
-- Open risks / owner items: `docs/REQUIREMENTS.md` §12 lists six things only the
-  owner can supply (his earning / waste / never-block app list, his real ceilings
-  and floors, college timetable, notification tone + quiet hours, device make/model
-  + Android version, whether ₹12.50 is the only rate) — documented defaults are used
-  until he answers, each logged as reversible. Phase 4 (Accessibility + overlay
-  blocking) is the fragile one; its notification-only fallback is already recorded
-  in `docs/ROADMAP.md`. `docs/RESEARCH.md` stays on file: it is why in-app feature
-  blocking is out of scope and why every number is labelled device-reported.
+- Owner-local setup remains optional and on-device: enabled domains, timetable,
+  app lists, reminder windows and routines are not committed or asked as a blocking
+  chat questionnaire. The Phase 4 Accessibility path remains optional/fragile;
+  checklist use must work with it disabled. `docs/RESEARCH.md` remains the source
+  for why in-app feature blocking is out of scope and why automatic usage numbers
+  are labelled device-reported.
 
 ## How to continue
 
-1. Read `docs/REQUIREMENTS.md`, `docs/ROADMAP.md`, `docs/DECISIONS.md` and the
-   latest `docs/phases/` record — trust the repo, not memory. Ask nothing that is
-   already recorded.
-2. Implement **phase 0**, all four parts, evidence-first. Then one phase per chat,
-   in order, each ending in a sideloadable increment the owner can see on his own
-   phone.
-3. End with: CI green + the run's downloadable `app-progress-apk` artifact ·
-   `docs/phases/00-bootstrap-hello.md` (say what the APK shows) · roadmap row ✅ ·
-   this file updated · short report (run id, tip sha, APK, what is now visible) ·
-   stop at the merge gate.
+1. Read `docs/REQUIREMENTS.md`, `docs/ROADMAP.md`, `docs/DECISIONS.md`,
+   `docs/UI_DESIGN.md` and the latest `docs/phases/` record — trust the repo, not
+   memory. Ask nothing that is already recorded.
+2. This documentation-closure round must pass its PR review/merge gate first. Do
+   not start Phase 7 until the owner separately authorizes that phase. Then
+   implement **Phase 7 only** (data safety and migration foundation),
+   evidence-first. Keep the full device matrix at Phase 15 and preserve P0 before
+   Phase 8.
+3. End each implementation phase with CI green and its `app-progress-apk`; the
+   owner installs it and records a short smoke check plus the phase-specific
+   evidence in the phase record. Update roadmap/prompt and stop at the merge gate.
+   No PR or merge without an explicit command.

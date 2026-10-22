@@ -26,6 +26,55 @@
   wiring, store listing and release prep are sequenced after it** (phases 5–6),
   outside the four-week build clock. Owner selected the "4 weeks — ship core,
   defer monetization to the next phase" option.
+
+### Owner update — gate answers (2026-10-22)
+
+- The owner approved evolving this **existing app** into the Daily Logger / external
+  brain, not creating a separate checklist app. Keep it single-user, offline and
+  English-only, with no account, backend, ads or analytics. Package and database
+  identity remain `io.github.pabi277.dayledger`; all new examples, tests and
+  starter content remain generic and fictional.
+- **Visible label:** “Daily Logger” is approved, but ships with the Phase 8
+  checklist front door. Until Phase 8, the current installed label remains “Day
+  Ledger.” Do not rename the package or database.
+- **UI:** the approved hybrid is Today = Command Center Checklist, Plan/Tomorrow =
+  timeline, Focus = One Thing. Primary navigation is Today · Plan · Habits ·
+  Review · More. Usage, Earn, Learn, Limits, Categories, Notifications and
+  Settings remain reachable; usage evidence supports Today and is not its hero.
+- **Android backup:** exclude the app database and all app-private Daily Logger
+  data from Android OS cloud backup and device-to-device transfer. The only backup
+  is a file explicitly exported by the user through SAF. Phase 7 must implement
+  and verify `android:allowBackup="false"`, applicable legacy full-backup rules
+  and API 31+ data-extraction rules; this is not yet implemented in the current
+  build.
+- **Reminder defaults:** Core every 20 minutes per occurrence, at most four
+  sound/vibration fires for that occurrence subject to its separate daily Core cap,
+  then silent ongoing/widget visibility until action or day close; Standard initial
+  plus one repeat after 45–60 minutes; Flexible one gentle reminder or digest.
+  Defaults are editable per item/domain/global. Quiet hours are a no-fire window;
+  global Pause suppresses checklist reminders through the selected resume time
+  while preserving due state; Less Often is scoped to the selected trigger/profile.
+  Separate daily Core/general checklist caps are mandatory and distinct from the
+  existing R12 usage-reminder cap.
+- **Repository:** remain PUBLIC and keep its existing name. Do not rename the
+  repository in this task. Committed documentation/examples/fixtures must remain
+  generic and sanitized; do not restore owner profile, timetable, routine or
+  financial details from an unsanitized handoff.
+- **Time/scope:** no fixed calendar deadline for proposed Phases 7–15. The
+  historical four-week statement applies to Phases 0–4 only. MVP is Phases 7–10,
+  followed by a 14-day real-use gate before Phase 11. Work one owner-approved
+  phase per chat; define measurable trial criteria before starting that gate.
+- **Device order:** the full device matrix remains Phase 15; P0 remains required
+  before Phase 8. Every implementation phase also requires an owner APK install
+  and a short recorded smoke check. This documentation-only closure does not
+  authorize Phase 7 implementation or a Phase 8 label change.
+- **Signing evidence:** two progress APK runs and the main signed-release attempt
+  were audited at metadata level, but the artifact downloads were not accessible
+  in this environment, so certificate fingerprints/update-install compatibility
+  remain unknown. Phase 7 must stop at an owner gate if continuity is unstable or
+  cannot be established; use GitHub Actions secret names only in any plan, never
+  secret values.
+
 ### Plan revision (owner, 2026-10-15) — the gate answer "revise", now specified
 
 - 2026-10-15 — **Who is this app for?** — **The owner only.** His words: *"I want
@@ -120,12 +169,12 @@
 
 ## Law waivers (owner-approved exceptions to this repo's `rule.md`)
 
-- **None.** Law 3 (idea → published ≤ 4 weeks) is **kept**, not waived
-  (2026-10-15). The four-week clock is understood to cover the v1 build
-  (phases 0–4); phases 5–6 (monetization, listing, release prep) are explicitly
-  sequenced after it by the owner's scope decision above. If the owner later
-  wants the whole of phases 0–6 inside a longer window, that becomes a law-3
-  waiver recorded here with its date.
+- **None.** Law 3 (idea → published ≤ 4 weeks) was **kept, not waived**
+  (2026-10-15). The historical four-week statement applies only to Phases 0–4;
+  phases 5–6 were sequenced outside that historical window. Owner clarification
+  (2026-10-22): it creates **no fixed calendar deadline for proposed Phases 7–15**.
+  Do not invent a schedule or imply that this clarification is authorization to
+  implement multiple phases at once.
 
 ## Agent decisions (reversible — object and they change)
 
@@ -219,12 +268,13 @@
   re-checked only if publishing is ever revisited), minSdk **26**. Reversible.
 - 2026-10-15 — **Twelve candidate features proposed, none added to the roadmap**
   (`docs/REQUIREMENTS.md` §11.5, C1–C12): deadline/exam countdown, class-gap
-  earning advisor, "what that cost you" opportunity-cost insight, payout tracker,
-  source reliability notes, bedtime shutdown, morning protection, focus whitelist,
-  learning continuity, auto-backup triggers, audit export, permission/battery
-  health. Each is derived from the owner's own context and is **waiting on his
-  pick**; the four-week budget and kill test P0 take precedence. Agent
-  recommendation if only three fit: C1 + C2 + C12. Reversible.
+  earning advisor, opportunity-cost insight, payout tracker, source reliability
+  notes, bedtime shutdown, morning protection, focus whitelist, learning
+  continuity, auto-backup triggers, audit export, permission/battery health. They
+  were awaiting a choice at that time. The owner-approved 2026-10-22 Daily Logger
+  direction supersedes that candidate list for Phases 7–15; C1–C12 are not selected
+  and are not current owner gates. Do not re-offer them unless the owner reopens
+  the scope.
 - 2026-10-15 — **Data model shape** — see `docs/REQUIREMENTS.md` §6:
   `AppUsageSample`, `AppInfo`, `Category`, `DayPlan`, `Block`, `Template` +
   `TemplateItem`, `NotificationRule`, `LimitEvent`, `EarningEntry`,
@@ -232,19 +282,28 @@
   paise, local-date keys, append-only history, every aggregate recomputable from raw
   rows and unit-tested. Sketch only — no code in plan docs. Reversible.
 
-## Open (decide-once items not yet asked)
+## Open (current owner gates)
 
-- **None outstanding.** Both permitted batches have been used and answered on
-  2026-10-15: batch A (direction + languages + monetization + budget/scope) and
-  batch B (the exit gate). Nothing else will be asked.
-- ~~**Blocking, owner-side:** the revision list for the plan.~~ **Delivered
-  2026-10-15** and written up as `docs/REQUIREMENTS.md`; `docs/ROADMAP.md`,
-  `rule.md`, `prompt.md` and `README.md` were re-cut around it.
-- **Blocking now, owner-side:** (a) approval of the revised plan — the repo
-  authorization (public + MIT), the git author identity and the name/package are
-  already recorded and will be used the moment the plan is approved; (b) optional
-  but sharpening: the six inputs in `docs/REQUIREMENTS.md` §12, and any edit to
-  R1–R34 ("edit insight app" — the spec is his to rewrite).
+- The 2026-10-15 decision batches and the 2026-10-22 product/delivery gate answers
+  are closed. Do not re-ask the label, UI, repository, timebox, reminder-default or
+  Android-backup decisions recorded above.
+- This documentation-closure request authorizes documentation only. Phase 7
+  implementation remains a separate phase and is not started here; no checklist
+  schema may ship before its backup, migration and signing/install evidence is
+  complete.
+- Remaining Phase 7 work is **technical evidence, not an unanswered product
+  preference**: non-destructive paths from Room v1–v5; complete SAF backup/restore;
+  verified Android OS-backup exclusion; signing-certificate continuity and an
+  update-over-install proof or owner-approved data-preserving procedure; and the
+  P0 owner-device check before Phase 8. If signing continuity is unknown or
+  unstable, stop at the owner gate in `docs/ROADMAP.md`.
+- Phases 7–15 have no fixed calendar deadline. Before the 14-day real-use gate
+  after Phase 10, agree its measurable criteria; it does not replace P0–P3.
+- Owner-local domains, routines, tasks, app lists and reminder windows remain
+  private on-device choices. Use generic editable defaults and do not ask for
+  personal timetable/routine details in chat.
+- The repository remains public under its current name. A repository rename is
+  not authorized by this work and is not a pending blocker for the approved plan.
 
 ## Owner verification tasks (before any store submission)
 
