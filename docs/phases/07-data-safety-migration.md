@@ -214,6 +214,10 @@ the same `run-as` route on a debug build) after the reinstall.
 
 ### 6c. Termux variant (owner's environment: phone only, no PC)
 
+> The full, phone-friendly walkthrough now lives in
+> [`07-owner-rescue-runbook.md`](07-owner-rescue-runbook.md) — start there; this
+> section keeps only the shape of the route.
+
 Same idea, different transport: **wireless debugging to the same phone**, so the
 `adb` client and the device are one handset. Needs **Android 11 or newer** (its
 `Wireless debugging` menu) and Termux installed from **F-Droid** (the Play build is
