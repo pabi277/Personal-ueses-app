@@ -107,17 +107,14 @@ jobs:
       - name: Record APK signing certificate
         run: |
           set -uo pipefail
-          APK=$(ls app/build/outputs/apk/debug/*.apk 2>/dev/null | head -n 1 || true)
           OUT="$RUNNER_TEMP/signing-certificate.txt"
-          if [[ -z "$APK" ]]; then
-            echo "::error::No debug APK found to inspect."
-            exit 1
-          fi
-          # apksigner if the SDK exposes it, otherwise keytool from the JDK (which
-          # always exists after setup-java and can read a v1-signed APK).
-          APKSIGNER=$(find /usr/local/lib/android /opt/android-sdk "${ANDROID_HOME:-/nonexistent}" "${ANDROID_SDK_ROOT:-/nonexistent}" -maxdepth 6 -name apksigner -type f 2>/dev/null | sort -V -r | head -n 1 || true)
+          REPORT="$RUNNER_TEMP/signing-report.txt"
+          APK=$(ls app/build/outputs/apk/debug/*.apk 2>/dev/null | head -n 1 || true)
+          # Gradle's own signing report needs no SDK tooling and prints the SHA-256
+          # of the certificate that actually signed the debug variant.
+          ./gradlew --no-daemon signingReport > "$REPORT" 2>&1 || true
           {
-            echo "apk: $(basename "$APK")"
+            echo "apk: $(basename "${APK:-missing}")"
             echo "workflow run: $GITHUB_RUN_ID"
             echo "commit: $GITHUB_SHA"
             if [[ -n "${ANDROID_KEYSTORE_PATH:-}" ]]; then
@@ -125,18 +122,22 @@ jobs:
             else
               echo "signing mode: throwaway debug key (owner secrets absent)"
             fi
-            if [[ -n "$APKSIGNER" ]]; then
-              echo "tool: $APKSIGNER"
-              "$APKSIGNER" verify --print-certs "$APK" 2>&1 | grep -Ei "signer #1 certificate" || true
-            else
-              echo "tool: keytool -printcert -jarfile"
-              keytool -printcert -jarfile "$APK" 2>&1 | tail -n 25 || true
-              echo "--- signature entries inside the APK ---"
-              unzip -l "$APK" 2>/dev/null | grep -Ei "META-INF/.*(RSA|DSA|EC|SF)$|META-INF/MANIFEST" || echo "none (v2-only signature)"
-            fi
+            echo "--- gradle signingReport (SHA-256 lines) ---"
+            grep -iE "Variant:|Config:|Store:|Alias:|SHA-256:" "$REPORT" || true
           } | tee "$OUT"
-          FINGERPRINT=$(grep -iE "(SHA-256 digest|SHA256:)" "$OUT" | head -n 1 || true)
-          SHORT=$(printf '%s' "$FINGERPRINT" | sed -E 's/.*(SHA-256 digest:|SHA256:)//' | tr -cd '0-9A-Fa-f' | cut -c1-24 || true)
+          FINGERPRINT=$(grep -iE "SHA-256:" "$OUT" | head -n 1 || true)
+          SHORT=$(printf '%s' "$FINGERPRINT" | sed -E 's/.*SHA-256://' | tr -cd '0-9A-Fa-f' | cut -c1-24 || true)
+          if [[ -z "$SHORT" && -n "$APK" ]]; then
+            # Fallbacks: apksigner from the SDK, then keytool on the v1 signature.
+            APKSIGNER=$(find /usr/local/lib/android /opt/android-sdk "${ANDROID_HOME:-/nonexistent}" "${ANDROID_SDK_ROOT:-/nonexistent}" -maxdepth 6 -name apksigner -type f 2>/dev/null | sort -V -r | head -n 1 || true)
+            if [[ -n "$APKSIGNER" ]]; then
+              "$APKSIGNER" verify --print-certs "$APK" 2>&1 | grep -iE "signer #1 certificate (DN|SHA-256)" | tee -a "$OUT" || true
+            else
+              keytool -printcert -jarfile "$APK" 2>&1 | tee -a "$OUT" || true
+            fi
+            FINGERPRINT=$(grep -iE "SHA-256 digest:|SHA256:" "$OUT" | head -n 1 || true)
+            SHORT=$(printf '%s' "$FINGERPRINT" | sed -E 's/.*(SHA-256 digest:|SHA256:)//' | tr -cd '0-9A-Fa-f' | cut -c1-24 || true)
+          fi
           [[ -n "$SHORT" ]] || SHORT="unknown"
           if [[ "$SHORT" == "unknown" ]]; then
             echo "::warning::No certificate fingerprint could be extracted; see signing-certificate.txt"
