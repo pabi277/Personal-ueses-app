@@ -62,6 +62,7 @@ jobs:
         shell: bash
         run: |
           set -uo pipefail
+          exec > >(tee -a /tmp/build.log) 2>&1
           if [[ -z "${ANDROID_KEYSTORE_BASE64:-}" ]]; then
             echo "::warning::Owner signing secrets are absent: this app-progress-apk is signed by a throwaway debug key and CANNOT be installed over an owner-key build. Add the four repository secrets named in the workflow header."
             exit 0
@@ -90,6 +91,9 @@ jobs:
             *) TYPE="unknown(magic $MAGIC)" ;;
           esac
           echo "keystore: ${#ANDROID_KEYSTORE_BASE64} base64 chars, $(wc -c < "$KEYSTORE_PATH") bytes, type $TYPE"
+          # Also surface it as an annotation: step logs are not always readable,
+          # and this distinguishes a truncated paste from a wrong password.
+          echo "::warning title=keystore file::type=$TYPE bytes=$(wc -c < "$KEYSTORE_PATH") base64chars=${#ANDROID_KEYSTORE_BASE64}"
 
           if ! keytool -list -keystore "$KEYSTORE_PATH" -storepass "$ANDROID_KEYSTORE_PASSWORD" > "$RUNNER_TEMP/kt.txt" 2>"$RUNNER_TEMP/kt.err"; then
             echo "::error::ANDROID_KEYSTORE_PASSWORD does not open the keystore (or the file is corrupt). Fix the secret, nothing else."
