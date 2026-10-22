@@ -332,6 +332,28 @@ only by two runs **after** the owner adds the secrets showing the same SHA-256
 fingerprint — that is the evidence this gate needs, and it is recorded here when it
 exists.
 
+### 8c. Round-2 CI record
+
+| Item | Value |
+|---|---|
+| Green run | `39773260641` (`Android CI`, push, branch `arena/0276c412-personal-ueses-app`) |
+| Tip commit | `3b72eb7` |
+| Steps | `Prepare owner signing key on runner` ✅ (warns: secrets absent), `Run unit tests and build debug APK` ✅, `Record APK signing certificate` ✅, `Upload progress APK` ✅ |
+| Artifact | `app-progress-apk`, id `12423721661`, 18,234,553 bytes, `sha256:c5902be1…7cf47a`, expires 2026-11-21 |
+| Signed release job | skipped (branch build — main only) |
+| Expected annotation | *"Owner signing secrets are absent: this app-progress-apk is signed by a throwaway debug key…"* |
+
+Two earlier runs of this round are worth keeping: `39772365133` (docs-only commit
+`92b4c96`, green) and `39773026332` (`8d5efe1`, failed at `configure :app` because a
+`.kts` script resolves `java` to Gradle's `java` extension, so `java.io.File` was an
+unresolved reference; fixed in `3b72eb7`). The failure was reported automatically as
+issue **#12**, which is left open — closing issues needs the owner's command.
+
+**Consequence to keep in mind until the owner's key exists:** no APK CI can produce
+right now is installable over the build already on the phone, because every one of
+them is signed by a *different* throwaway key. The next install the owner makes —
+whoever signs it — is the one that needs the §6b rescue first.
+
 ## 9. Phase 7 work held back (nothing started)
 
 Room v5 schema export and fictional v1–v5 fixtures · explicit non-destructive
