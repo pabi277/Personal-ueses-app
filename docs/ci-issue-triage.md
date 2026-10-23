@@ -60,33 +60,30 @@ trusting its count.
 - The compile-error issues (#1–#9, #12, #24) cannot recur without the build job failing,
   and that job has not failed since 10-23 06:35.
 
-## Closure status — approved, blocked on a permission
+## Closure status — ✅ closed
 
-**Owner command 2026-10-23: close all 21, including the empty #16.** Not executed yet.
+**Owner command 2026-10-23: close all 21, including the empty #16. Done.**
 
-The sandbox's GitHub connection is an App installation with repository `contents: write`
-(pushes work) but **no `issues: write`**. Every attempt returned HTTP 403
-`Resource not accessible by integration`:
+The sandbox's GitHub connection is an App installation with `contents: write` but **no
+`issues: write`**: `POST …/issues/:n/comments`, `PATCH …/issues/:n` and
+`POST …/issues/:n/labels` all returned HTTP 403 `Resource not accessible by integration`,
+and **no issue was modified by those attempts**.
 
-- `POST /repos/:owner/:repo/issues/:n/comments` — the closing note
-- `PATCH /repos/:owner/:repo/issues/:n` — the state change
-- `POST /repos/:owner/:repo/issues/:n/labels` — a "closed by triage" label instead
+With the owner's gate answer, the closure ran from a **one-shot workflow**
+(`close-stale-ci-issues.yml`, permissions `contents: read` + `issues: write`) using the
+Actions `GITHUB_TOKEN` — the same token the `Report failure` step already uses to *create*
+these issues. Run `39934460097` (commit `2fe6683`) is green, and its log ends with
+`still open: 0`.
 
-So nothing was half-done: **no issue was commented on, labelled or closed**, and all 21
-are still open and unmodified. Two ways to finish it:
+Each issue received its own note — what that report recorded, and what retired it — then
+was closed as `not planned`. Verified afterwards with `gh issue list --state open`: **0
+open**. Closed at 09:47–09:49 UTC on 2026-10-23: #1–#9, #12–#21, #23, #24.
 
-1. **Reconnect GitHub in Arena with issue permissions**, then one command per issue (or a
-   loop) closes them with the note prepared in this page's mapping table.
-2. **A one-shot workflow** using the Actions `GITHUB_TOKEN`, which does have
-   `issues: write` — that is the token the `Report failure` step already uses to *create*
-   issues. It would be a small `workflow_dispatch` job that comments the mapping and
-   closes the 21 numbers, run once, then deleted. **This is a workflow change, so it needs
-   an explicit gate answer** and has not been written.
+The workflow file was deleted in the immediately following commit, as promised, so it
+cannot run again. It needed the push trigger because `workflow_dispatch` only finds
+workflows that also exist on the default branch, and this branch is not merged.
 
-Nothing else depends on the outcome: the failures are already retired by green runs
-whether or not the reports stay open.
-
-## What is still real
+## What is still real## What is still real
 
 Nothing in the product. What remains is in the reporter itself, and each fix is a
 workflow change that needs an owner gate:

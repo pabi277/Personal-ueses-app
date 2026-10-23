@@ -230,17 +230,16 @@
    against `MigrationTest`'s expectation table before committing (19/19 tables, zero
    differences, both indices, `autoGenerate` on the seven integer ids). Artifact downloads
    still fail in the agent's sandbox, so the next schema bump needs one more owner download. Run `39933633831` (commit `77e6c2c`) is green with the file committed and 113 tests passing, so the export step tolerates a pre-populated `app/schemas`.
-7. **The 21 open issues are all auto-filed `CI build failure` reports and all describe
-   failures that no longer reproduce** — see `docs/ci-issue-triage.md` for the per-issue
-   mapping to the run that filed it and the green evidence that retired it. **The owner
-   commanded closing all 21 on 2026-10-23 and that command is still open:** the sandbox's
-   GitHub connection has `contents: write` but no `issues: write`, so every comment/close
-   attempt returned 403 `Resource not accessible by integration` and no issue was touched.
-   Finish it either by reconnecting GitHub with issue permissions, or — only with an
-   explicit gate answer — a one-shot `workflow_dispatch` job using the Actions
-   `GITHUB_TOKEN`, which does have `issues: write`. The auto-filer itself has three defects
-   worth a gate (it lists *every* test under "failing unit tests", it filed an empty issue
-   #16, and it refiles the same failure on every push); no workflow change has been made.
+7. **The 21 auto-filed `CI build failure` issues are ✅ closed (2026-10-23).** All described
+   failures that no longer reproduce; the per-issue mapping to the filing run and to the
+   green evidence is in `docs/ci-issue-triage.md`. The sandbox connection has no
+   `issues: write` (403 on comment/close), so the closure ran from a **one-shot workflow**
+   using the Actions token — owner-authorized, run `39934460097` green, `still open: 0`,
+   and the workflow file was deleted in the next commit. **No open issues remain.** The
+   filer itself still has three defects, and fixing them is a workflow change that needs a
+   fresh gate: it lists *every* test under "failing unit tests" rather than the failed ones,
+   it filed an empty report (#16), and it refiles the same signature on every push with no
+   close-on-green.
 8. End each implementation phase with CI green and its `app-progress-apk`; the
    owner installs it and records a short smoke check plus the phase-specific
    evidence in the phase record. Update roadmap/prompt and stop at the merge gate.
