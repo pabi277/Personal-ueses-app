@@ -228,6 +228,18 @@ upgrade; the first screen follows UI Design v2 and displays Daily Logger while
 
 ### Phase 9 — Capture, deadlines and carryover
 
+> 🚧 **Status: in progress (2026-10-23).** All four parts are implemented. Schema v7 adds
+> one table, `inbox_items`, so a title-first capture is not a checklist item until it is
+> given a date; `checklist_tasks.dueDate` therefore stays `NOT NULL` and no table is
+> recreated. Day close gives every leftover exactly one recorded outcome (Move, Schedule,
+> Shrink to Minimum, Drop) — nothing rolls over by itself — and carried occurrences use a
+> deterministic `carried:<source>:<date>` id, so a double tap or a retried rollover cannot
+> duplicate. Carryover is counted from the append-only log and flagged from the second carry.
+> Top 3 is per date, capped at three, editable from Plan, and Plan now lists the date's
+> checklist items — the gap Phase 8 left open. Run `39915691906` is green on **102** tests,
+> with one signer and `room-schema` 2,406 B. Awaiting the owner's install and smoke check.
+> Full record: [`docs/phases/09-capture-deadlines-carryover.md`](phases/09-capture-deadlines-carryover.md).
+
 **Parts**
 
 - **9.1 — Quick Capture/Inbox:** title-first capture from Today and useful entry

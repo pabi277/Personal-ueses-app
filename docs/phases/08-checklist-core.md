@@ -231,6 +231,22 @@ Every clause of the roadmap's Done-means sentence for this phase is met:
 **Merged to `main` on 2026-10-23** with the owner's explicit command, together with the P0
 measurement fix and F1 that had been waiting on this branch.
 
+### Post-merge run on `main` (added 2026-10-23 from the Phase 9 branch)
+
+PR **#25** merged `--merge` at 2026-10-23T06:52:36Z, moving `main` `2ee8048` → **`66582f1`**.
+The branch run before it (`39913785708`) and the PR run (`39913960646`) were both green, but
+neither proves the post-merge tree, so the main run was waited for:
+
+- **`39914193884`** on `main` @ `66582f1` — **both jobs success**, including
+  `Signed release AAB and APK`.
+- `signed-android-release` 24,718,303 B · `app-progress-apk` 18,519,604 B ·
+  `room-schema` 2,378 B · signer `533D76ED5C2E264779EE005C…` (the tenth run on one key).
+
+These numbers were first written into a commit (`7f8d1f7`) that stayed on the
+`arena/2105d3de-…` branch and was never merged, so `main` did not carry them until this
+phase's branch added them. Recording that plainly rather than letting the record look like
+the main run was never checked.
+
 **Carried forward, not silently dropped:** the Plan screen does not render checklist items
 (§6); habit *editing* is edit-lite (create/pause/archive, no reschedule or in-place edit);
 reminder profiles, Morning Brief, Evening Close carryover and Focus remain unstarted and
