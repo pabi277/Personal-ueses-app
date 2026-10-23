@@ -13,14 +13,25 @@ migrate from.
   app/schemas/io.github.pabi277.dayledger.data.DayLedgerDatabase/7.json
   ```
 
-## Why the file is not here yet
+## Status
 
-Nothing in this directory has ever been committed. The agent's sandbox cannot download
-GitHub Actions artifacts: `gh api …/artifacts/<id>/zip` returns HTTP 302 to
-`productionresultssa8.blob.core.windows.net`, which is unreachable from there, and job-log
-downloads fail the same way. The owner agreed on 2026-10-23 to download the 2,406-byte
-artifact by hand (latest: `room-schema` id `12490252325` from run `39927725461`, commit
-`6c2da08`).
+**Committed on 2026-10-23.** `7.json` is the export from the v7 build, downloaded by the
+owner from the `room-schema` artifact of run `39932190461` (`29d90aa`) and verified before
+committing:
+
+- `version` **7**, `identityHash` **`29eea1eeb853cfa0825788e7abb39bb9`**, 19 tables.
+- Every table, column, affinity, `notNull` flag and primary-key position matches the
+  expectation table in `MigrationTest` (`migrated schema matches the v7 entity definitions
+  exactly`) — 19/19 tables, zero differences, checked mechanically rather than by eye.
+- The two indices the entities declare are present:
+  `index_checklist_occurrences_dateKey` and `index_completion_logs_occurrenceId`.
+- `autoGenerate` is true on exactly the seven `INTEGER` ids the entities mark
+  `@PrimaryKey(autoGenerate = true)`: `notification_log`, `blocks`, `template_items`,
+  `limit_events`, `earnings`, `learning`, `completion_logs`.
+
+The agent's sandbox still cannot download Actions artifacts (302 to
+`productionresultssa8.blob.core.windows.net`, unreachable), so any future schema version
+needs the same one-time owner download.
 
 ## Rules for this directory
 

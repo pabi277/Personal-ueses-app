@@ -224,12 +224,12 @@
    green on **113 tests** (11 new), `app-progress-apk` 18,599,302 B, signer unchanged.
    **No device check has been reported** — the new field and the block-screen limit line
    still need the owner's smoke check.
-6. **F3 is still blocked on one download.** The canonical export is `7.json`; CI uploads it
-   as the `room-schema` artifact (latest id `12489713440`, 2,406 B), and nothing has ever
-   been committed — there is no `.gitignore` and no `app/schemas` directory. Artifact and
-   job-log downloads both fail in the agent's sandbox (302 to
-   `productionresultssa8.blob.core.windows.net`, unreachable). The owner can download it, or
-   authorize a CI step that puts the JSON where the API can read it (an issue body works).
+6. **F3 is ✅ done (2026-10-23).** `app/schemas/io.github.pabi277.dayledger.data.DayLedgerDatabase/7.json`
+   is committed — the v7 export, `identityHash` `29eea1eeb853cfa0825788e7abb39bb9`, 19 tables,
+   downloaded by the owner from the `room-schema` artifact of run `39932190461` and verified
+   against `MigrationTest`'s expectation table before committing (19/19 tables, zero
+   differences, both indices, `autoGenerate` on the seven integer ids). Artifact downloads
+   still fail in the agent's sandbox, so the next schema bump needs one more owner download.
 7. **The 21 open issues are all auto-filed `CI build failure` reports and all describe
    failures that no longer reproduce** — see `docs/ci-issue-triage.md` for the per-issue
    mapping to the run that filed it and the green evidence that retired it. **The owner
