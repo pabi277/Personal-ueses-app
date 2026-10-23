@@ -167,7 +167,7 @@ private fun HabitCard(habit: HabitRuleEntity, viewModel: HabitsViewModel) {
             "weekly" -> "Weekly on: " + (
                 ChecklistGeneration.weekdayNames(ChecklistGeneration.parseWeekdays(habit.weekdays))
                     .ifBlank { "no day yet" }
-                )"
+                )
             else -> "Daily"
         }
         Text(schedule, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
