@@ -62,22 +62,22 @@ Bootstrapped from AppFlow @ c8856022ca57cdf23ae78b9491481543db89438d on 2026-10-
 
 ### Phase 7 — Data safety and migration foundation (no checklist features)
 
-> 🚧 **Status: IN PROGRESS — parts 7.1–7.4 CI-verified; signing gate CLOSED by
-> evidence; two device checks outstanding (2026-10-23).** History: the gate was run
-> first and failed (progress APKs were signed by a per-runner throwaway key — measured,
-> `DC13157E…` vs `B988DBD3…` on the same tree; the release job was missing the name
-> `ANDROID_KEYSTORE_BASE64`). The owner then answered the gate (data **valuable**, one
-> owner-controlled identity **approved**), created the keystore outside the repo and set
-> the four secret names. Two runs of one commit now print the **same** signer
-> (`signer-533D76ED5C2E264779EE005C`), so the identity is stable. Phase 7's data-safety
-> work is implemented and CI-verified: Room v5 schema export, explicit non-destructive
-> `1→2→3→4→5` migrations (no version bump, destructive fallback removed), versioned SAF
-> backup/restore for every table and setting, and `allowBackup="false"` plus
-> legacy/API-31 extraction rules verified in the merged manifest. On device the owner
-> has installed and launched the build, exported a complete **14-table, 538-row**
-> backup, and seen a non-backup file refused. **Outstanding to mark Done:** the restore
-> round trip with the expected row count, and installing a later owner-keyed APK over
-> the current one (part 7.5). Evidence:
+> 🚧 **Status: parts 7.1–7.5 complete, CI-verified and exercised on the owner's
+> device; only the P0 comparison remains (2026-10-23).** The signing gate failed first
+> and was closed by evidence afterwards: progress APKs were signed by a per-runner
+> throwaway key (measured — `DC13157E…` vs `B988DBD3…` on one tree) and the release job
+> was missing the name `ANDROID_KEYSTORE_BASE64`; the owner then created a keystore
+> outside the repo and set the four secret names, and four runs across three commits now
+> print one signer, `533D76ED5C2E264779EE005C…`. Phase 7 work, all CI-verified: Room v5
+> schema export; explicit non-destructive `1→2→3→4→5` migrations with the destructive
+> fallback removed (no version bump); versioned SAF backup/restore over every table and
+> setting; `allowBackup="false"` plus legacy/API-31 extraction rules verified in the
+> merged manifest; and a `fix(data)` for `app_info` rows that `INSERT OR IGNORE` had been
+> silently dropping since Phase 1, found from the owner's own backup. **Owner-reported
+> on device:** install + launch, a complete 14-table/538-row backup, a non-backup file
+> refused, update-over-install of a later owner-keyed APK, and a restore. **Outstanding
+> to mark Done:** the P0 number comparison against Digital Wellbeing that this phase's
+> Done-means requires before Phase 8. Evidence:
 > [`docs/phases/07-data-safety-migration.md`](phases/07-data-safety-migration.md).
 
 #### Historical Room inventory (verified from Git history, 2026-10-22)

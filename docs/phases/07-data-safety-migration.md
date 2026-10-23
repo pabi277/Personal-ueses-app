@@ -601,22 +601,83 @@ the same key as the installed one, so installing it **over** the current build c
 7.5. Any uninstall prompt or `INSTALL_FAILED_UPDATE_INCOMPATIBLE` means the identity is
 not yet what CI reports — report the exact text.
 
+## 9b. Round 5 — owner device results and a defect the backup exposed (2026-10-23)
+
+### 9b.1 Owner-reported device evidence
+
+| Check | Owner's report | Interpretation |
+|---|---|---|
+| Install a later owner-keyed APK **over** the installed one | "update work … done" | part 7.5 satisfied **as reported by the owner**; the agent did not observe the device |
+| Restore the exported backup | "data restore … done" | part 7.2 **restore** satisfied as reported |
+| Errors during either | none reported | no failure text to record |
+
+These are **owner reports**, recorded separately from CI evidence exactly as
+`rule.md` §6 requires. The agent has not seen the device screen and does not claim to
+have verified it. To make the record quotable, the owner can still paste the grey status
+line from Settings → Data (`Backup written: …` / `Restore complete: …`) and the day
+totals after a restore; those two strings would replace "as reported" with a quoted
+observation.
+
+Four CI runs now agree on one signer — `39896987585`, `39897192094`, `39899516617`,
+`39900306233` → `signer-533D76ED5C2E264779EE005C` — across three commits, so the
+identity that installed the update is the identity CI publishes.
+
+### 9b.2 Defect found in the owner's own backup: `app_info` was always empty
+
+The attached backup contained **0 `app_info` rows against 301 `app_usage` rows**. That
+asymmetry is the signature of a silent write failure, and it is one:
+
+- `AppInfoDao.insertIfMissing` ran
+  `INSERT OR IGNORE INTO app_info (packageName, label, category) VALUES (?, ?, 'Unclassified')`
+  (`AppInfoDao.kt:25` before the fix).
+- `alwaysAllowed` is `INTEGER NOT NULL` in the Room-generated DDL and carries **no SQL
+  default**, so the omitted column was `NULL` → constraint violation.
+- Because the statement is `INSERT OR IGNORE`, SQLite **reported success and wrote
+  nothing**. Every label, category and limit that lives in that table was therefore
+  never persisted, and no backup could ever contain it.
+
+Fixed in `6a9f708`: the insert now supplies `alwaysAllowed = 0` and `limitMin = NULL`
+explicitly, with a sqlite-jdbc regression test (`AppInfoInsertTest`, 4 cases) that
+reproduces the silent drop, proves the shipped statement writes the row, keeps the
+first label on a repeat insert, and confirms `app_usage` was never affected. Green run
+`39900306233` (30 tests). The table's existing emptiness is not back-filled: the next
+ingest repopulates it, and the first backup taken after that will show real labels.
+
+This defect mattered for Phase 7, not just for polish: a "complete backup" that can
+never contain per-app labels and categories is not complete, and P0's per-app view
+depends on those labels.
+
+### 9b.3 What is still owed before Phase 7 can be marked ✅
+
+The roadmap's Done means for this phase includes **P0 passing on the owner's phone
+before Phase 8**. That check is still open, and it is worth doing on the APK from
+`39900306233` because that build is the first one that can actually store app labels:
+
+1. Install the `app-progress-apk` from run `39900306233` over the installed build
+   (also a second, independent update-over-install datapoint).
+2. Open Today and note the total for today and the top app.
+3. Open Android **Settings → Digital Wellbeing → Dashboard → Today** and read the same
+   two figures.
+4. Report both pairs. Agreement within roughly 10 % is what Phase 1's P0 cell asks for.
+5. Also note whether app names now appear instead of package names — that confirms
+   §9b.2 on the device.
+
 ## 10. How this phase becomes Done
 
 Two evidence lines, kept separate so CI evidence and owner evidence can never be
 confused.
 
-**CI/test evidence — ✅ complete:** run `39777555069` (26 tests; migrations v1–v4 → v5
-non-destructive, schema matrix, backup/restore round trip, refusal paths,
-merged-manifest OS-backup exclusion, `app-progress-apk` + `room-schema`), plus
-`39896987585` and `39897192094` proving one stable owner-keyed certificate
-(`533D76ED5C2E264779EE005C…`).
+**CI/test evidence — ✅ complete:** `39777555069` (migration matrix, backup/restore round
+trip, refusal paths, merged-manifest OS-backup exclusion, schema export) and
+`39900306233` (30 tests including the `app_info` regression), with four runs agreeing on
+one owner-keyed signer `533D76ED5C2E264779EE005C…`.
 
-**Owner-device evidence — partly recorded (2026-10-23):**
-✅ installs and launches · ✅ backup export produces a complete 14-table, 538-row file ·
-✅ a non-backup file is refused · ✅ no errors observed.
-⬜ restore round trip with the expected row count (§9a.4 A).
-⬜ update-over-install of a later owner-keyed APK (§9a.4 B).
+**Owner-device evidence — recorded as owner report (2026-10-23):**
+✅ installs and launches · ✅ complete 14-table/538-row backup exported ·
+✅ non-backup file refused · ✅ update-over-install of a later owner-keyed APK ·
+✅ restore performed. ⬜ the exact status strings and day totals that would turn
+"as reported" into a quoted observation, and ⬜ the **P0 number comparison** that the
+roadmap's Done means requires before Phase 8.
 
-Phase 7 becomes ✅ when those two boxes are ticked. Until then it stays 🚧, and no
-summary may describe the backup/restore or the update path as verified on the device.
+Phase 7 therefore stays 🚧 on one item only — P0 — even though every part (7.1–7.5) is
+implemented, CI-verified and exercised on the device.

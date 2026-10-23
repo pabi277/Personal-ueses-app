@@ -167,18 +167,18 @@
 1. Read `docs/REQUIREMENTS.md`, `docs/ROADMAP.md`, `docs/DECISIONS.md`,
    `docs/UI_DESIGN.md` and the latest `docs/phases/` record — trust the repo, not
    memory. Ask nothing that is already recorded.
-2. Phase 7 is **in progress, nearly done**: parts **7.1–7.4 are implemented and
-   CI-verified** (run `39777555069`, 26 tests), the **signing gate is closed by
-   evidence** — the owner's keystore exists, the four secret names are set, and two
-   runs of one commit print the same signer `533D76ED5C2E264779EE005C…` — and the
-   owner has installed, launched, exported a complete 14-table/538-row backup and
-   seen a bad file refused on device. Only two device checks remain
-   (`docs/phases/07-data-safety-migration.md` §9a.4): a restore round trip that
-   shows "Restore complete: 538 rows across 14 tables" and 2026-10-21 = 725 min /
-   2026-10-22 = 237 min, and installing a later owner-keyed APK **over** the current
-   build (part 7.5). Do not mark Phase 7 ✅ before both. Never ask for secret values
-   or keystore contents; the owner's backup JSON must never be committed. Keep the
-   full device matrix at Phase 15 and preserve P0 before Phase 8.
+2. Phase 7 is **complete except its P0 item**. Parts 7.1–7.5 are implemented and
+   CI-verified (latest green `39900306233`, 30 tests), the signing gate is closed by
+   evidence (four runs, one signer `533D76ED5C2E264779EE005C…`), and the owner reports
+   on device: install, launch, a complete 14-table/538-row backup, a refused bad file,
+   update-over-install of a later owner-keyed APK, and a restore. Also fixed in this
+   phase: `app_info` had been empty since Phase 1 because `INSERT OR IGNORE` silently
+   dropped every row that omitted the NOT NULL `alwaysAllowed` column (found from the
+   owner's backup; `6a9f708`). **Still owed:** the P0 comparison (Today's total and top
+   app vs Digital Wellbeing, ~10 %) on the `39900306233` APK — that is the one item
+   keeping Phase 7 🚧 and it also gates Phase 8. Do not mark Phase 7 ✅ without it, and
+   never commit the owner's backup JSON or secret values. Keep the full device matrix
+   at Phase 15.
 3. End each implementation phase with CI green and its `app-progress-apk`; the
    owner installs it and records a short smoke check plus the phase-specific
    evidence in the phase record. Update roadmap/prompt and stop at the merge gate.
