@@ -201,8 +201,10 @@
    generation is idempotent) and `completion_logs` (append-only, undo writes a row).
    Today is the Command Center Checklist and the visible label is **Daily Logger**;
    `io.github.pabi277.dayledger` and `dayledger.db` are unchanged. Blocked on one
-   workflow guard that hardcodes `5.json` — a workflow edit needs an owner gate answer.
-   Record: `docs/phases/08-checklist-core.md`.
+   schema-export guard that hardcoded `5.json` was fixed under the owner's gate answer.
+   Run `39908874710` is green (86 tests, `app-progress-apk` 18,511,120 B); the owner
+   install and smoke check are still owed before ✅. Record:
+   `docs/phases/08-checklist-core.md`.
 4. End each implementation phase with CI green and its `app-progress-apk`; the
    owner installs it and records a short smoke check plus the phase-specific
    evidence in the phase record. Update roadmap/prompt and stop at the merge gate.

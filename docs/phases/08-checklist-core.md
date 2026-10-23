@@ -1,8 +1,8 @@
 # Phase 08 — Checklist core
 
-- Status: 🚧 **IN PROGRESS — code complete and green in compile + 86 unit tests; one CI
-  workflow guard still pins the v5 schema filename and blocks the artifact upload**
-  · Date: 2026-10-23 · Branch: `arena/2105d3de-personal-ueses-app`
+- Status: 🚧 **IN PROGRESS — code and CI complete and green; awaiting the owner's install
+  and smoke check before it can be marked ✅** · Date: 2026-10-23 ·
+  Branch: `arena/2105d3de-personal-ueses-app`
 - Base: `main` @ `2ee8048` (Phase 7 merged) plus F1 (`784b92e`)
 - Owner command that started this phase: *"Start phase 8"* (2026-10-23).
 - Not started: Phase 9, any release, any PR, any merge.
@@ -81,9 +81,21 @@ The first screen is rebuilt to `docs/UI_DESIGN.md` §3:
 
 ## 5. Evidence
 
-**CI (run `39908508385`, commit `873e0fd`):** units tests and debug build ✅,
-signing certificate recorded ✅, OS-backup exclusion in the merged manifest ✅,
-**`Record Room schema export` ❌** — see §7. Artifact upload skipped as a consequence.
+**CI (run `39908874710`, commit `e65f33f`) — ✅ green, both the compile/test step and
+every upload:**
+
+| Item | Result |
+|---|---|
+| `Run unit tests and build debug APK` | ✅ (86 tests) |
+| `Record APK signing certificate` | ✅ `533D76ED5C2E264779EE005C…` — still one signer |
+| `Verify OS-backup exclusion in the merged manifest` | ✅ |
+| `Record Room schema export` | ✅ after the owner-approved guard fix (§7) |
+| `app-progress-apk` | ✅ 18,511,120 B |
+| `room-schema` | ✅ 2,378 B (was 1,805 B at v5 — the four new tables, as expected) |
+| `signer-533D76ED5C2E264779EE005C` | ✅ |
+
+The earlier run `39908508385` is kept in the record as the red one: compile and all tests
+passed there too, and only the schema-filename guard failed.
 
 Counts: **86 unit tests** in the tree (was 67 before this phase: +19 checklist tests).
 The migration suite now proves every supported start version (1–6) reaches v6 with all
@@ -107,37 +119,38 @@ carryover while DL12/DL16 own reminder profiles. This round therefore ships:
 Editing an existing habit's schedule, archiving with confirmation, reschedule, the Morning
 Brief and day close remain open and are listed in `docs/ROADMAP.md` as unstarted.
 
-## 7. The one open blocker — a workflow guard, which needs an owner answer
+## 7. The workflow guard — resolved by owner gate answer
 
-The workflow step `Record Room schema export` runs:
+The workflow step `Record Room schema export` used to run:
 
 ```bash
 SCHEMA=$(find app/schemas -name "5.json" | head -n 1)
 ```
 
 That filename was correct while the database was v5. Phase 8 legitimately moves the
-database to v6, so Room now exports `6.json` and the step fails with
-`Room did not export the v5 schema` — even though the export itself is fine and the unit
-tests that check the schema all pass.
+database to v6, so Room exported `6.json` and the step failed with
+`Room did not export the v5 schema` — even though the export itself was fine.
 
-This is a **workflow change**, and the standing constraint is explicit: no workflow change
-without an owner gate answer. Hence this record stops here rather than editing
-`.github/workflows/`. The three candidate fixes are in the chat message that accompanies
-this record; the recommended one pins nothing and cannot rot again:
+A workflow edit needs an explicit owner gate answer, so it was **asked, not assumed**. The
+owner approved the version-agnostic option on 2026-10-23, and commit `e65f33f` now does:
 
 ```bash
-SCHEMA=$(ls -1 app/schemas/*/*.json | sort -V | tail -n 1)
+SCHEMA=$(ls -1 app/schemas/*/*.json 2>/dev/null | sort -V | tail -n 1) || true
 ```
 
-Notes for whoever applies it: the step exists to prove Room exported *a* schema and to
-print its `identityHash`. `schemas/…/5.json` is still absent from the tree (follow-up F3),
-and with the version bumped Room will never regenerate it, so any check that hardcodes
-`5.json` is dead regardless of this phase.
+It still proves Room exported a schema and still prints the `identityHash`, but it cannot
+rot at v7. The `|| true` on the substitution keeps `set -uo pipefail` from failing the
+whole step on an empty glob before the readable error can be printed.
+
+Still open, unchanged: `schemas/…/5.json` is absent from the tree (follow-up F3) and Room
+will not regenerate a superseded version, so F3 needs an artifact download rather than a
+normal commit.
 
 ## 8. What Phase 8 still needs before it can be marked ✅
 
-1. The workflow guard fix above, then a green run with `app-progress-apk` uploaded.
-2. An owner install and short smoke check: a weekday habit and a one-off task create only
+1. ~~The workflow guard fix, then a green run with `app-progress-apk` uploaded.~~ Done:
+   `39908874710`.
+2. An owner install of `app-progress-apk` from `39908874710` and the short smoke check: a weekday habit and a one-off task create only
    the correct occurrences; Done works without a form; Minimum differs from Full; Undo
    works; a restart adds no duplicates; Phase 7 data is intact after the upgrade; the
    first screen shows Daily Logger.
