@@ -95,7 +95,11 @@ fun TodayScreen(state: TodayUiState, onRefresh: () -> Unit) {
             item { EmptyState("No usage data for today yet.") }
         } else {
             items(state.apps) { u ->
-                AppRow(u, state.appInfo[u.packageName]?.category ?: "Unclassified")
+                AppRow(
+                    u = u,
+                    label = state.appInfo[u.packageName]?.label ?: u.packageName,
+                    category = state.appInfo[u.packageName]?.category ?: "Unclassified"
+                )
             }
         }
     }
@@ -118,11 +122,11 @@ fun HourlyStrip(hours: List<Int>) {
 }
 
 @Composable
-fun AppRow(u: AppUsageEntity, category: String) {
+fun AppRow(u: AppUsageEntity, label: String, category: String) {
     AppCard {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(u.packageName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                Text(label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                 Text(category, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Text(formatMinutes(u.foregroundMinutes), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)

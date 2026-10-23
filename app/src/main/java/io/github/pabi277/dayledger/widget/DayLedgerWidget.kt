@@ -7,18 +7,19 @@ import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.provideContent
 import androidx.glance.layout.Column
 import androidx.glance.text.Text
-import io.github.pabi277.dayledger.data.DayLedgerDatabase
+import io.github.pabi277.dayledger.data.UsageRepository
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
 class DayLedgerWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val db = DayLedgerDatabase.getInstance(context)
+        val repo = UsageRepository(context)
         val today = LocalDate.now().toString()
-        val total = db.usageDao().totalForDate(today)
-        val apps = db.usageDao().forDate(today)
-        val info = db.appInfoDao().all().associateBy { it.packageName }
+        // Same rules as Today: screen-on foreground time, launcher/system UI/dialer excluded.
+        val apps = repo.screenUsageForDate(today)
+        val total = apps.sumOf { it.foregroundMinutes }
+        val info = repo.appInfoAll().associateBy { it.packageName }
         val topWaste = apps.filter { info[it.packageName]?.category == "Social/Waste" }
             .maxByOrNull { it.foregroundMinutes }
         val topWasteLabel = topWaste?.let { info[it.packageName]?.label ?: it.packageName } ?: "—"
