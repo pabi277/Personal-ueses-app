@@ -204,13 +204,14 @@
    guard that hardcoded `5.json` was fixed under the owner's gate answer. Run `39913142388` is green (88 tests, `app-progress-apk` 18,519,606 B), the owner's
    device smoke check reports every clause passing, and four defects it caught are fixed.
    Record: `docs/phases/08-checklist-core.md`.
-4. **Phase 9 (Capture, deadlines and carryover) is in progress.** Schema v7 adds
+4. **Phase 9 (Capture, deadlines and carryover) is ✅ Done (2026-10-23).** Schema v7 adds
    `inbox_items`; captures are title-first and land in the Inbox with an Undo instead of
    inventing a deadline. Day close requires one explicit decision per leftover (Move,
    Schedule, Shrink to Minimum, Drop) and never rolls an item silently; carried ids are
    deterministic so a retried rollover cannot duplicate. Top 3 is per date and Plan now
-   renders the date's checklist items. Run `39915691906` is green (102 tests); the owner
-   install and smoke check are still owed before ✅. Record:
+   renders the date's checklist items. Run `39915691906` is green (102 tests) and the
+   owner's device smoke check reports all six checks passing. **Not yet merged to `main`** —
+   awaiting an explicit merge command. Record:
    `docs/phases/09-capture-deadlines-carryover.md`.
 5. End each implementation phase with CI green and its `app-progress-apk`; the
    owner installs it and records a short smoke check plus the phase-specific

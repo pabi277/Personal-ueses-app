@@ -1,7 +1,7 @@
 # Phase 09 — Capture, deadlines and carryover
 
-- Status: 🚧 **IN PROGRESS — code complete, CI green on 102 tests, awaiting the owner's
-  install and smoke check** · Date: 2026-10-23 · Branch
+- Status: ✅ **DONE (2026-10-23)** — all four parts implemented, CI green on 102 tests, and
+  the owner reports the device smoke check passing · Date: 2026-10-23 · Branch
   `arena/8322cba4-personal-ueses-app`
 - Base: `main` @ `66582f1` (Phase 8 merged)
 - Owner command that started this phase: *"Start phase 9"* (2026-10-23).
@@ -108,21 +108,37 @@ Recorded here rather than rewritten, because this branch is never force-pushed.
 - **Plan's timeline/overlap drawing** — Plan gains the checklist list it was missing, not the
   proportional timeline UI Design v2 describes.
 
-## 7. What Phase 9 still needs before it can be marked ✅
+## 7. Owner device evidence — all six checks pass (2026-10-23)
 
-An owner install of `app-progress-apk` from `39915691906` and this smoke check:
+Install of `app-progress-apk` from run `39915691906` over the existing build. The owner
+reports **"Passed device tests"** for the whole checklist below; per this record's rule, that
+is owner-reported evidence and is not embellished with numbers that were not supplied.
 
-1. **Capture is fast and undated.** Today → type a title → Add. It must appear under
-   `Inbox (1)` and **not** on today's checklist. One tap **Undo** removes it.
-2. **Scheduling works.** Inbox → **Today** → the item appears on Today's checklist.
-   **Tomorrow** → it appears on Plan for tomorrow, not today.
-3. **Day close asks about everything.** Close day → every unfinished item is listed.
-   Use each of the four decisions once and confirm the item leaves the list and the day's
-   counts stay honest (a Moved item must not count as Full or Minimum).
-4. **Carryover is visible and does not duplicate.** Move the same item to the same target
-   date twice (close the screen and reopen, then Move again if it reappears) — the target
-   day must show **one** occurrence, not two.
-5. **Top 3.** Plan → Tomorrow → toggle three items, confirm a fourth toggle is refused, and
-   that the list survives leaving and returning to the screen.
-6. **Phase 8 and 7 data intact.** The upgrade is v6 → v7; a backup should still read 19
-   tables with the previous rows unchanged.
+| # | Check | Result |
+|---|---|---|
+| 1 | Capture is title-first, lands in the Inbox, and Undo removes it | ✅ owner-reported |
+| 2 | Scheduling to Today / Tomorrow puts the item on the right date | ✅ owner-reported |
+| 3 | Day close lists every leftover and each of the four decisions settles it | ✅ owner-reported |
+| 4 | Repeating a move to the same target date does not duplicate the occurrence | ✅ owner-reported |
+| 5 | Top 3 accepts three, refuses a fourth, and survives leaving the screen | ✅ owner-reported |
+| 6 | The v6 → v7 upgrade leaves earlier data intact | ✅ owner-reported |
+
+**What that evidence does and does not carry.** The idempotency claim (4) is the one with the
+most resting on it, and it is backed by construction plus a SQL test rather than by the device
+check alone: a carried row's primary key is `carried:<sourceId>:<date>` and the insert ignores
+conflicts, so a repeat targets the same row. The owner's check confirms the behaviour on real
+hardware; the test explains why it cannot drift.
+
+## 8. Phase 9 — Done
+
+Every clause of the roadmap's Done-means sentence for this phase is met:
+
+| Clause | Evidence |
+|---|---|
+| Title-only capture saves within 10 seconds | device: capture from Today's field saves on the title alone; no field is required beyond it |
+| Template reapply does not duplicate occurrences | template application replaces only that day's blocks; checklist generation is keyed on `kind:source:date` and conflict-ignoring, unchanged from Phase 8 |
+| Midnight rollover does not duplicate occurrences | deterministic `carried:` ids + conflict-ignoring insert, SQL-tested; device check 4 confirms |
+| Every unfinished item gets an explicit next action | day close lists every leftover on or before the day; `isLeftover` admits only `pending`/`later`, and nothing carries itself |
+
+**Not yet merged to `main`.** This phase's branch sits two commits ahead of `66582f1` and
+awaits an explicit merge command, exactly as Phase 8 did.
