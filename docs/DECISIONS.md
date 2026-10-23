@@ -329,6 +329,26 @@
 - **Phase 8 device check:** the owner will install `app-progress-apk` from run
   `39908874710` and run the smoke check before Phase 8 is marked ✅. CI green is not
   device evidence and must not be recorded as such.
+- **Built 2026-10-23 (F2).** The precedence rule is implemented once, in `LimitRules`,
+  and both the blocker and the Limits screen call it, so the number shown and the number
+  enforced cannot drift. Order: `alwaysAllowed` → active earning session on an Earning
+  app → per-app `limitMin` → category budget → no limit. The owner's rule sits in the
+  middle of that order, not at the top, because R16/DL24 already say a limit must never
+  lock an essential app or an earning app mid-session; the per-app limit decides only
+  *which number* applies to an app that is eligible to be limited at all.
+- **The two questions left open above were settled in implementation**, and are
+  recorded here as agent decisions the owner can correct rather than as owner answers:
+  (a) `alwaysAllowed` and an active earning session **outrank** a per-app limit — the
+  protections are absolute, so a 5-minute Instagram limit cannot be forged into an
+  unlock of a banking app by setting the bank's own limit; (b) a reached limit **does**
+  write a `limit_events` row, at most **one per app per day** (the accessibility service
+  fires on every window-state change, so an unguarded write would file dozens of rows for
+  one block), and it stores the **effective** limit — the per-app value when that is what
+  fired, otherwise the category budget — instead of the `0` placeholder it used to store.
+- **A stored `limitMin` of 0 or less means "no per-app limit"**, not "allow zero
+  minutes". The Limits field therefore clears rather than blocks when emptied, and the
+  category budget takes over. This keeps the column's old default (`0`) meaning what it
+  has always meant for every row already on the owner's phone.
 
 ## Open (current owner gates)
 

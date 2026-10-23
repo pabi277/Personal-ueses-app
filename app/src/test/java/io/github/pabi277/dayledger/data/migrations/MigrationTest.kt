@@ -207,7 +207,7 @@ class MigrationTest {
     }
 
     @Test
-    fun `every supported start version reaches v6 with all its rows intact`() {
+    fun `every supported start version reaches v7 with all its rows intact`() {
         for (start in DatabaseMigrations.SUPPORTED_VERSIONS) {
             val conn = connect()
             conn.use {

@@ -186,8 +186,8 @@
    update-over-install of a later owner-keyed APK, and a restore corroborated by his own
    exports (seven historical days identical after clear-data; six configuration tables
    row-for-row identical). Per-app categories were silently discarded before the fix (the
-   UPDATE matched zero rows), so they need one re-entry on device; per-app `limitMin` has
-   no write path at all, a Phase 4 scope question for the P0/Phase 8 conversation. Also
+   UPDATE matched zero rows), so they need one re-entry on device; per-app `limitMin` had
+   no write path at all at that point — that is now F2, built 2026-10-23 (item 5 below). Also
    fixed in this
    phase: `app_info` had been empty since Phase 1 because `INSERT OR IGNORE` silently
    dropped every row that omitted the NOT NULL `alwaysAllowed` column (found from the
@@ -213,7 +213,30 @@
    owner's device smoke check reports all six checks passing. **Not yet merged to `main`** —
    awaiting an explicit merge command. Record:
    `docs/phases/09-capture-deadlines-carryover.md`.
-5. End each implementation phase with CI green and its `app-progress-apk`; the
+5. **F2 (per-app limits) is ✅ built (2026-10-23).** The owner's rule — a per-app limit
+   overrides the category budget, which then applies only to apps with no explicit limit —
+   lives in one pure object, `LimitRules`, that both `BlockerAccessibilityService` and the
+   Limits screen call, so the number shown and the number enforced cannot differ.
+   `alwaysAllowed` and an active earning session still outrank every number (R16/DL24).
+   The Limits screen now has a per-app limit field; blank/0 means *no per-app limit*.
+   A reached limit writes one `limit_events` row per app per day with the effective limit
+   (previously a hardcoded `0`). No schema change. Run `39927123528` (commit `ffa6502`)
+   green on **113 tests** (11 new), `app-progress-apk` 18,599,302 B, signer unchanged.
+   **No device check has been reported** — the new field and the block-screen limit line
+   still need the owner's smoke check.
+6. **F3 is still blocked on one download.** The canonical export is `7.json`; CI uploads it
+   as the `room-schema` artifact (latest id `12489713440`, 2,406 B), and nothing has ever
+   been committed — there is no `.gitignore` and no `app/schemas` directory. Artifact and
+   job-log downloads both fail in the agent's sandbox (302 to
+   `productionresultssa8.blob.core.windows.net`, unreachable). The owner can download it, or
+   authorize a CI step that puts the JSON where the API can read it (an issue body works).
+7. **The 21 open issues are all auto-filed `CI build failure` reports and all describe
+   failures that no longer reproduce** — see `docs/ci-issue-triage.md` for the per-issue
+   mapping to the run that filed it and the green evidence that closed it. None has been
+   closed: closing is an owner command. The auto-filer itself has three defects worth a
+   gate (it lists *every* test under "failing unit tests", it filed an empty issue #16, and
+   it refiles the same failure on every push); no workflow change has been made.
+8. End each implementation phase with CI green and its `app-progress-apk`; the
    owner installs it and records a short smoke check plus the phase-specific
    evidence in the phase record. Update roadmap/prompt and stop at the merge gate.
    No PR or merge without an explicit command.
