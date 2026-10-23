@@ -171,7 +171,12 @@
    CI-verified (latest green `39900306233`, 30 tests), the signing gate is closed by
    evidence (four runs, one signer `533D76ED5C2E264779EE005C…`), and the owner reports
    on device: install, launch, a complete 14-table/538-row backup, a refused bad file,
-   update-over-install of a later owner-keyed APK, and a restore. Also fixed in this
+   update-over-install of a later owner-keyed APK, and a restore corroborated by his own
+   exports (seven historical days identical after clear-data; six configuration tables
+   row-for-row identical). Per-app categories were silently discarded before the fix (the
+   UPDATE matched zero rows), so they need one re-entry on device; per-app `limitMin` has
+   no write path at all, a Phase 4 scope question for the P0/Phase 8 conversation. Also
+   fixed in this
    phase: `app_info` had been empty since Phase 1 because `INSERT OR IGNORE` silently
    dropped every row that omitted the NOT NULL `alwaysAllowed` column (found from the
    owner's backup; `6a9f708`). **Still owed:** the P0 comparison (Today's total and top

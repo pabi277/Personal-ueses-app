@@ -73,10 +73,12 @@ Bootstrapped from AppFlow @ c8856022ca57cdf23ae78b9491481543db89438d on 2026-10-
 > fallback removed (no version bump); versioned SAF backup/restore over every table and
 > setting; `allowBackup="false"` plus legacy/API-31 extraction rules verified in the
 > merged manifest; and a `fix(data)` for `app_info` rows that `INSERT OR IGNORE` had been
-> silently dropping since Phase 1, found from the owner's own backup. **Owner-reported
-> on device:** install + launch, a complete 14-table/538-row backup, a non-backup file
-> refused, update-over-install of a later owner-keyed APK, and a restore. **Outstanding
-> to mark Done:** the P0 number comparison against Digital Wellbeing that this phase's
+> silently dropping since Phase 1, found from the owner's own backup. **On device:** install + launch, a complete backup
+> (14 tables/538 rows, then 613 rows after the fix), a non-backup file refused,
+> update-over-install of a later owner-keyed APK, and a restore corroborated by the
+> owner's own exports — seven historical days return identical after clear-data and six
+> configuration tables return row-for-row identical; the `app_info` fix shows 0 → 72
+> labelled rows. **Outstanding to mark Done:** the P0 number comparison against Digital Wellbeing that this phase's
 > Done-means requires before Phase 8. Evidence:
 > [`docs/phases/07-data-safety-migration.md`](phases/07-data-safety-migration.md).
 
