@@ -1,110 +1,99 @@
-# Rescue the Day Ledger database from the installed build (one phone, Termux)
+# Phase 7 owner runbook — everything from Termux, nothing in Chrome
 
-**Why this exists.** The build installed on the phone was signed by a throwaway CI key.
-It can never be updated, only replaced — and replacing it means uninstalling, which
-deletes `databases/dayledger.db`. The data in it is valuable (owner, 2026-10-22), so it
-must be copied out **before** anything is installed. Nothing here changes the app or
-its data; every step only reads.
+One phone, no PC, no root. Every step below runs in Termux; Chrome is only ever
+used for the one GitHub login code (step 2), never for configuring secrets,
+downloads or installs.
 
-**Environment:** one phone (vivo, Android 11+), no PC, no root, Wi-Fi available.
-Termux from F-Droid. Total time: about 15 minutes.
+**Why this exists.** The installed build is signed by a throwaway CI key, so it can
+never be updated — only replaced. Replacing means uninstalling, which deletes
+`databases/dayledger.db`. That data is valuable (owner, 2026-10-22), so it is copied
+out **first**. After step 12 the app has one stable, owner-controlled identity and
+every later `app-progress-apk` installs over the previous one.
 
-**Golden rule:** do not uninstall, do not "clear data", do not install any APK until
-step 8 has printed a verified `user_version = 5`.
+**Golden rule:** no uninstall, no "clear data", no installing an APK until step 7 has
+printed `user_version = 5` **and** a second copy exists outside Termux.
 
 ---
 
-## Step 1 — Install Termux (skip if already installed)
+## PART A — Tools (steps 1–2)
 
-Install **Termux from F-Droid** (`f-droid.org`), not from Play — the Play build is
-stale and its `android-tools` package is old. If Termux is already there, continue.
-
-## Step 2 — Install the tools (once, ~2 minutes)
+### 1. Packages
 
 ```bash
 pkg update -y
-pkg install -y android-tools sqlite openjdk-17
-adb version
-sqlite3 --version
+pkg install -y android-tools sqlite openjdk-17 gh termux-api
+adb version && sqlite3 --version && gh --version | head -n 1
 ```
 
-- `adb version` must print a version line.
-- `openjdk-17` is needed later for `keytool` (your signing key).
-- If `pkg update` complains about mirrors, run it a second time; it recovers.
+If `pkg update` complains about mirrors, run it a second time; it recovers.
+Termux must be the **F-Droid** build, not the Play one.
 
-## Step 3 — Turn on the phone side
+### 2. GitHub login, once (the only Chrome moment)
 
-1. Settings → About phone → tap **Build number** 7 times → back → **System →
-   Developer options**.
-2. Turn **ON**: *USB debugging* (helps Funtouch start the pairing service) and
-   **Wireless debugging**.
-3. When the pop-up **“Allow wireless debugging on this network?”** appears, tick
-   **“Always allow on this network”** and tap **Allow**.
+```bash
+gh auth login
+```
 
-Keep the phone on the same Wi-Fi for all of this.
+Choose: **GitHub.com** → **HTTPS** → **Login with a web browser**.
+Termux shows a one-time code; open it in Chrome, paste the code, approve.
+Back in Termux it prints `✓ Logged in to github.com as pabi277`.
 
-## Step 4 — Pair (the step that was failing)
+```bash
+gh auth status
+gh api user -q .login          # must print pabi277
+```
 
-Tap **“Pair device with pairing code”**. A dialog shows a **6-digit code** and an
-**IP address & Port**, e.g. `192.168.1.23:37142`.
+Nothing else needs a browser afterwards.
 
-> The port changes **every time** that dialog opens. Never reuse an old number, and
-> never type a placeholder like `PAIRING_PORT` — `adb` needs the real digits, which is
-> why the earlier attempts failed instantly with `protocol fault`.
+---
 
-Don't hunt for the number by eye. In Termux:
+## PART B — Rescue the database (steps 3–7)
+
+### 3. Phone switches
+
+Settings → About phone → tap **Build number** 7× → **System → Developer options**:
+
+- **USB debugging**: ON (vivo/Funtouch starts the wireless pairing service more
+  reliably with it on)
+- **Wireless debugging**: ON
+- When **"Allow wireless debugging on this network?"** appears: tick **Always
+  allow**, tap **Allow**
+
+### 4. Pair and connect
+
+Open **"Pair device with pairing code"** in Termux's split screen so the code and
+port stay visible, then:
 
 ```bash
 adb kill-server
-adb mdns services
+adb mdns services                # shows real ports; the pairing one appears only while that dialog is open
 ```
 
-You will see the real pairing port in a line like:
-
-```
-adb-1A2B3C4D-XyZ123   _adb-tls-pairing._tcp.   192.168.1.23:37142
-```
-
-Pair with `127.0.0.1` — **not** `localhost`, which can resolve to IPv6 while adbd
-listens on IPv4 (that also produces `protocol fault`):
+Take the port from the `_adb-tls-pairing._tcp.` line and use **127.0.0.1**, not
+`localhost`:
 
 ```bash
-adb pair 127.0.0.1:37142
+adb pair 127.0.0.1:<pairing-port>
 ```
 
-Type the 6-digit code when asked. Success looks like:
-
-```
-Successfully paired to 127.0.0.1:37142 [guid=adb-…]
-```
-
-Pairing once per network is enough; Android remembers it.
-
-## Step 5 — Connect (a different port)
-
-Close the pairing dialog and read the port on the main **Wireless debugging** screen
-under *“IP address & Port”* (often `:5555`, never the pairing port). Or ask adb:
+Type the 6-digit code → `Successfully paired to 127.0.0.1:<port>`.
+Close the pairing dialog, then connect with the **connect** port shown on the main
+Wireless debugging screen (often `:5555`):
 
 ```bash
-adb mdns services        # look for _adb-tls-connect._tcp.
-adb connect 127.0.0.1:5555
+adb connect 127.0.0.1:<connect-port>
 adb devices
 ```
 
-Expect: `127.0.0.1:5555   device`. If it says `offline`: `adb disconnect`, then
-`adb connect` again.
-
-## Step 6 — Prove the private folder is readable (the gate for everything else)
+### 5. Prove the private folder is readable
 
 ```bash
 adb shell run-as io.github.pabi277.dayledger id
 ```
 
-- Expected: `uid=10xxx(u0_xxx) gid=…` → continue.
-- `Package … is not debuggable` or `unknown package` → **stop**; the rescue route does
-  not exist and a different plan is needed.
+`uid=10xxx(u0_xxx)` → continue. `not debuggable` / `unknown package` → stop.
 
-## Step 7 — Copy the database out
+### 6. Copy the database
 
 ```bash
 adb shell am force-stop io.github.pabi277.dayledger
@@ -114,109 +103,146 @@ adb exec-out run-as io.github.pabi277.dayledger cat databases/dayledger.db-wal >
 ls -l ~/rescue
 ```
 
-`dayledger.db` must be clearly larger than 0 bytes.
-
-## Step 8 — Verify it before trusting it
+### 7. Verify, then keep two copies
 
 ```bash
-sqlite3 ~/rescue/dayledger.db "PRAGMA user_version;"
-sqlite3 ~/rescue/dayledger.db ".tables"
+sqlite3 ~/rescue/dayledger.db "PRAGMA user_version;"      # must print 5
+sqlite3 ~/rescue/dayledger.db ".tables"                    # 14 tables
 sha256sum ~/rescue/dayledger.db
-```
-
-Expected:
-
-- `user_version` = **5**
-- tables include `app_info app_usage blocks categories day_plans earnings hourly_usage
-  learning limit_events notification_log notification_rules settings template_items
-  templates`
-- one sha256 line — paste it back as evidence.
-
-Then keep a second copy outside Termux's private storage:
-
-```bash
-termux-setup-storage        # allow access when asked
+termux-setup-storage                                        # allow when asked
 mkdir -p ~/storage/shared/Documents/dayledger-rescue
-cp ~/rescue/dayledger.db ~/storage/shared/Documents/dayledger-rescue/
+cp ~/rescue/dayledger.db ~/rescue/dayledger.db-wal ~/storage/shared/Documents/dayledger-rescue/ 2>/dev/null || true
 ```
 
-## Step 9 — Your signing key (still in Termux, never in the repo)
+---
+
+## PART C — One stable signing identity (steps 8–12)
+
+### 8. Create the key (typed twice, verified before anything leaves the phone)
 
 ```bash
+set -u
+R=pabi277/Personal-ueses-app
+BR=arena/0276c412-personal-ueses-app
+
+rm -f ~/dayledger-owner.jks
+while :; do
+  read -s -p "new password (letters+digits, 12+ chars): " P; echo
+  read -s -p "type it again: " P2; echo
+  [ "$P" = "$P2" ] && [ ${#P} -ge 12 ] && break
+  echo "  no match or too short - retry"
+done
 keytool -genkeypair -v -keystore ~/dayledger-owner.jks -alias dayledger-owner \
-  -keyalg RSA -keysize 4096 -validity 10000
+  -keyalg RSA -keysize 4096 -validity 10000 \
+  -dname "CN=Day Ledger,O=Personal,C=IN" -storepass "$P" -keypass "$P"
 ```
 
-Enter a store password (twice), press **Enter** to reuse it as the key password, then
-answer the name/organisation questions however you like (`Day Ledger`, `IN`, …).
+### 9. Local proof — hard stop
 
-Back it up twice — a lost keystore costs one more uninstall later:
+```bash
+keytool -list -keystore ~/dayledger-owner.jks -storepass "$P" >/dev/null 2>&1 \
+  && echo "keystore+password OK" \
+  || { echo "BROKEN - nothing uploaded, stop here"; exit 1; }
+```
+
+Do not continue unless it prints **keystore+password OK**.
+
+### 10. Upload the four secrets from Termux (`printf`, never `echo`)
+
+```bash
+printf '%s' "$P" | gh secret set ANDROID_KEYSTORE_PASSWORD  --repo "$R"
+printf '%s' "$P" | gh secret set ANDROID_KEY_PASSWORD      --repo "$R"
+printf '%s' 'dayledger-owner' | gh secret set ANDROID_KEY_ALIAS --repo "$R"
+base64 -w0 ~/dayledger-owner.jks | gh secret set ANDROID_KEYSTORE_BASE64 --repo "$R"
+gh secret list --repo "$R"      # four names, no values
+```
+
+### 11. Back up the key, keep the password somewhere safe
 
 ```bash
 cp ~/dayledger-owner.jks ~/storage/shared/Documents/dayledger-rescue/
 sha256sum ~/dayledger-owner.jks
+unset P P2
 ```
 
-Never commit, upload or paste the `.jks` or its passwords.
+Losing this file costs one more uninstall later, so keep a second copy elsewhere.
 
-## Step 10 — Four GitHub secrets, values yours alone
+### 12. Run CI twice and compare the fingerprints
 
 ```bash
-base64 -w0 ~/dayledger-owner.jks > ~/dayledger-owner.jks.b64
-wc -c ~/dayledger-owner.jks.b64      # expect several thousand characters
-termux-clipboard-set < ~/dayledger-owner.jks.b64
+gh workflow run "Android CI" --repo "$R" --ref "$BR"
+sleep 20
+gh run list --repo "$R" --branch "$BR" --limit 2
 ```
 
-(`termux-clipboard-set` needs `pkg install termux-api` plus the Termux:API app; without
-it, open the file in an editor and copy it.)
+After each run finishes:
 
-GitHub → repo → **Settings → Secrets and variables → Actions → New repository secret**,
-four times:
+```bash
+gh run list --repo "$R" --branch "$BR" --limit 1 --json databaseId -q '.[0].databaseId' \
+  | xargs -I{} gh api repos/$R/actions/runs/{}/artifacts -q '.artifacts[].name'
+```
 
-| Name | Value |
-|---|---|
-| `ANDROID_KEYSTORE_BASE64` | contents of `~/dayledger-owner.jks.b64` |
-| `ANDROID_KEYSTORE_PASSWORD` | store password from step 9 |
-| `ANDROID_KEY_ALIAS` | `dayledger-owner` |
-| `ANDROID_KEY_PASSWORD` | key password from step 9 |
+Expected: a `signer-<24 hex>` name (not `signer-unknown`), and the **same** name for
+both runs. Same name twice = one stable certificate = the signing gate is satisfied.
+Report the two names.
 
-Say only “secrets added” in chat — never the values.
+---
 
-## Step 11 — Only after CI confirms the fingerprint
+## PART D — Switch over (steps 13–15, only after both runs match)
 
-Two runs must show the **same** signer SHA-256 (the CI artifact is named
-`signer-<first 24 hex>`). Then:
+### 13. Download the APK from Termux
 
-1. Uninstall Day Ledger once (data is safe in `~/rescue` and Documents).
-2. Download the `app-progress-apk` artifact, unzip, install, open.
-3. Put the history back (app closed first):
+```bash
+cd ~
+gh run download --repo "$R" --branch "$BR" --name app-progress-apk -D ~/apk
+ls ~/apk
+```
+
+### 14. One uninstall, then install
+
+Uninstall **Day Ledger** once (Settings → Apps). The data is already in
+`~/rescue` and Documents.
+
+```bash
+termux-open ~/apk/app-debug.apk     # opens the system installer; allow "install unknown apps" for Termux
+```
+
+Open the app once so its database is created.
+
+### 15. Put the history back
 
 ```bash
 adb shell am force-stop io.github.pabi277.dayledger
 adb shell run-as io.github.pabi277.dayledger rm -f databases/dayledger.db-wal databases/dayledger.db-shm
 adb shell run-as io.github.pabi277.dayledger sh -c 'cat > databases/dayledger.db' < ~/rescue/dayledger.db
+adb shell run-as io.github.pabi277.dayledger ls -l databases
 ```
 
-4. Open the app; the numbers should be back. From then on every
-   `app-progress-apk` installs **over** the previous one.
+Open the app; the numbers should be back. From now on every `app-progress-apk`
+installs **over** the previous build — no more uninstalls.
+
+### 16. Owner smoke check to report
+
+1. APK installed over the previous build without uninstalling.
+2. App launches; Today shows your history (not empty).
+3. Settings → **Back up everything** → save `dayledger-backup-*.json`; note the
+   "Backup written: 14 tables, N rows" line.
+4. Settings → **Restore from backup** on that file → "Restore complete: N rows".
+5. Restore a `.txt` file → must refuse with "Not a valid backup file", data unchanged.
+6. Any exact error text, and whether P0 usage numbers look right.
 
 ---
 
-## When something fails
+## Failure table
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `protocol fault (couldn't read status message)` | placeholder or stale port, or IPv6 | reopen the pairing dialog, re-read the port, `adb pair 127.0.0.1:<real port>` |
-| `adb mdns services` empty | pairing dialog closed, or old android-tools | reopen the dialog; `pkg upgrade -y android-tools`; `adb kill-server` |
-| `error: no devices/emulators found` | not connected yet | `adb connect 127.0.0.1:<connect port>` |
-| `device offline` | stale session | `adb disconnect` then `adb connect` again |
-| `adb: unknown command pair` | old platform-tools | `pkg upgrade -y android-tools` |
-| `run-as: Package … is not debuggable` | installed build is not a debug APK | stop; report the exact text |
-| `sqlite3: error` or `user_version` = 0 | copy was empty | repeat steps 6–8, check `ls -l` size first |
-
-## What this is not
-
-It is not a substitute for the app's own SAF backup (Phase 7 part 7.2), it does not
-touch the app's data, and it does not authorise installing anything. The rescued file
-is a raw Room database, restored here through `run-as` on a debug build or through the
-app's restore path once the versioned backup exists.
+| `protocol fault (couldn't read status message)` | placeholder/stale port, or IPv6 `localhost` | reopen pairing dialog, re-read port, `adb pair 127.0.0.1:<digits>` |
+| `adb mdns services` empty | pairing dialog closed; old android-tools | reopen dialog; `pkg upgrade -y android-tools`; `adb kill-server` |
+| `unknown command pair` | old platform-tools | `pkg upgrade -y android-tools` |
+| `device offline` | stale session | `adb disconnect` → `adb connect` |
+| `run-as: not debuggable` | installed build is not a debug APK | stop; report exact text |
+| `keystore+password OK` does not print | password typed differently the two times, or keytool failed earlier | rerun step 8; check step 8 output for errors |
+| CI: `ANDROID_KEYSTORE_PASSWORD does not open the keystore` | secret ≠ store password | redo steps 8–10 without skipping step 9 |
+| CI: `signer-unknown` | fingerprint tooling mismatch | report the run id; CI falls back to Gradle `signingReport` |
+| `gh: not a git repository` | `gh workflow run` without `--repo` | always pass `--repo "$R"` |
