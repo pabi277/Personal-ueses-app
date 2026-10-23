@@ -5,11 +5,15 @@ import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.provider.Telephony
 import android.os.Build
 import android.os.Process
 import android.telecom.TelecomManager
 import androidx.room.withTransaction
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -20,6 +24,8 @@ class UsageRepository(private val context: Context) {
     private val hourlyDao = db.hourlyDao()
     private val appInfoDao = db.appInfoDao()
     private val categoryDao = db.categoryDao()
+    private val earningDao = db.earningDao()
+    private val settingDao = db.settingDao()
     private val usm = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
     private val pm = context.packageManager
 
@@ -28,8 +34,8 @@ class UsageRepository(private val context: Context) {
      * count them, so neither does Today. See [SystemPackageRules] for why this is resolved
      * from the platform rather than guessed from package names.
      */
-    private val isExcluded: (String) -> Boolean by lazy {
-        val home = try {
+    private val homePackage: String? by lazy {
+        try {
             pm.resolveActivity(
                 Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME),
                 PackageManager.MATCH_DEFAULT_ONLY
@@ -37,13 +43,27 @@ class UsageRepository(private val context: Context) {
         } catch (e: Exception) {
             null
         }
-        val dialer = try {
+    }
+
+    private val dialerPackage: String? by lazy {
+        try {
             (context.getSystemService(Context.TELECOM_SERVICE) as? TelecomManager)
                 ?.defaultDialerPackage
         } catch (e: Exception) {
             null
         }
-        SystemPackageRules.exclusion(home, dialer)
+    }
+
+    private val smsPackage: String? by lazy {
+        try {
+            Telephony.Sms.getDefaultSmsPackage(context)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private val isExcluded: (String) -> Boolean by lazy {
+        SystemPackageRules.exclusion(homePackage, dialerPackage)
     }
 
     fun hasUsagePermission(): Boolean {
@@ -219,11 +239,101 @@ class UsageRepository(private val context: Context) {
         // no-op placeholder; labels are set during ingest
     }
 
+    // --- F1 / R2a — suggested categories -------------------------------------------
+
+    /**
+     * Unclassified apps that have a defensible suggestion, in the order the owner should
+     * review them. Called after ingest, so `app_info` holds a row per app.
+     *
+     * Nothing is written here: the screen shows the suggestion and the owner taps once.
+     */
+    suspend fun pendingCategorySuggestions(): List<AppCategorySuggestion> = withContext(Dispatchers.IO) {
+        val rows = appInfoDao.all()
+        if (rows.isEmpty()) return@withContext emptyList()
+
+        // An app the owner has logged earnings against is an earning app by definition.
+        val earningPackages = earningDao.all().mapNotNull { it.appId }.toSet()
+        val dismissed = settingDao.all()
+            .map { it.key }
+            .filter { it.startsWith(DISMISSED_PREFIX) }
+            .map { it.removePrefix(DISMISSED_PREFIX) }
+            .toSet()
+
+        val inputs = rows.map { row ->
+            SuggestionInput(
+                packageName = row.packageName,
+                label = row.label,
+                category = row.category,
+                hint = hintOf(row.packageName),
+                isLifeSystemApp = isLifeSystemApp(row.packageName),
+                isKnownEarningApp = row.packageName in earningPackages,
+                dismissed = row.packageName in dismissed
+            )
+        }
+        CategorySuggestionRules.plan(inputs)
+    }
+
+    /** The owner accepted a suggestion. Same write path as a manual assignment. */
+    suspend fun acceptCategorySuggestion(suggestion: AppCategorySuggestion) =
+        appInfoDao.updateCategory(suggestion.packageName, suggestion.category)
+
+    /** The owner does not want this one suggested again. Stored as a setting — no schema change. */
+    suspend fun dismissCategorySuggestion(packageName: String) {
+        settingDao.upsert(SettingEntity(DISMISSED_PREFIX + packageName, "true"))
+    }
+
+    /** `ApplicationInfo.category` is only read, never inferred; unknown stays unknown. */
+    private fun hintOf(packageName: String): AppCategoryHint = try {
+        when (pm.getApplicationInfo(packageName, 0).category) {
+            ApplicationInfo.CATEGORY_GAME -> AppCategoryHint.GAME
+            ApplicationInfo.CATEGORY_AUDIO -> AppCategoryHint.AUDIO
+            ApplicationInfo.CATEGORY_VIDEO -> AppCategoryHint.VIDEO
+            ApplicationInfo.CATEGORY_IMAGE -> AppCategoryHint.IMAGE
+            ApplicationInfo.CATEGORY_SOCIAL -> AppCategoryHint.SOCIAL
+            ApplicationInfo.CATEGORY_NEWS -> AppCategoryHint.NEWS
+            ApplicationInfo.CATEGORY_MAPS -> AppCategoryHint.MAPS
+            ApplicationInfo.CATEGORY_PRODUCTIVITY -> AppCategoryHint.PRODUCTIVITY
+            else -> AppCategoryHint.UNDEFINED
+        }
+    } catch (e: Exception) {
+        // Uninstalled between ingest and the screen, or not visible to this uid: no guess.
+        AppCategoryHint.UNDEFINED
+    }
+
+    /**
+     * The system-life-app rule: the phone, messaging and system surfaces of daily life.
+     * Deliberately not "every preinstalled app" — a preinstalled browser or store app
+     * carries no life signal, and a wrong one-tap accept is worse than no suggestion.
+     */
+    private fun isLifeSystemApp(packageName: String): Boolean =
+        packageName == homePackage ||
+            packageName == dialerPackage ||
+            packageName == smsPackage ||
+            packageName in SYSTEM_LIFE_SURFACES
+
     companion object {
         /**
          * How far before a window we look for the screen state and the resumed package.
          * A screen left on overnight is bounded by this, not by the window.
          */
         private const val STATE_LOOKBACK_MS = 48L * 60L * 60L * 1000L
+
+        private const val DISMISSED_PREFIX = "suggestion.dismissed."
+
+        private val SYSTEM_LIFE_SURFACES = setOf(
+            "com.android.systemui",
+            "com.android.settings",
+            "com.android.dialer",
+            "com.google.android.dialer",
+            "com.samsung.android.dialer",
+            "com.android.incallui",
+            "com.samsung.android.incallui",
+            "com.android.server.telecom",
+            "com.android.mms",
+            "com.google.android.apps.messaging",
+            "com.samsung.android.messaging",
+            "com.android.contacts",
+            "com.google.android.contacts"
+        )
     }
 }

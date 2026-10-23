@@ -156,11 +156,12 @@
   **not** yet proven, and the two-run fingerprint comparison is still owed.
 
 - **Owner decision 2026-10-23 — suggested default categories (R2a):** categories are
-  **suggested, not silently filled**; the owner accepts with one tap. Scheduled **after
-  Phase 7 closes**, using only `ApplicationInfo.category` plus the system-life-app rule,
-  never overwriting an existing assignment, no suggestion when ambiguous, earning apps
-  never auto-suggested. Do not implement it inside the data-safety phase and do not
-  re-ask the choice. Follow-up queue is in `docs/ROADMAP.md` (R2a, the missing per-app
+  **suggested, not silently filled**; the owner accepts with one tap. **Delivered as F1
+  on 2026-10-23, after Phase 7 closed.** Implemented with only `ApplicationInfo.category`
+  plus the system-life-app rule, never overwriting an existing assignment, no suggestion
+  when ambiguous, earning apps never auto-suggested. Do not re-ask the choice. Note the
+  recorded interpretation: "system → Life" covers the phone/messaging/system surfaces,
+  not every preinstalled app. Follow-up queue is in `docs/ROADMAP.md` (R2a, the missing per-app
   `limitMin` write path, and checking in the canonical Room schema).
 - Owner-local setup remains optional and on-device: enabled domains, timetable,
   app lists, reminder windows and routines are not committed or asked as a blocking

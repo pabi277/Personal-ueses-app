@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.pabi277.dayledger.CategoryUiState
 import io.github.pabi277.dayledger.CategoryViewModel
+import io.github.pabi277.dayledger.data.AppCategorySuggestion
 import io.github.pabi277.dayledger.data.AppInfoEntity
 import io.github.pabi277.dayledger.ui.components.AppCard
 import io.github.pabi277.dayledger.ui.components.EmptyState
@@ -65,12 +66,50 @@ fun CategoriesScreen(state: CategoryUiState, viewModel: CategoryViewModel) {
                 }
             }
         }
+        if (state.suggestions.isNotEmpty()) {
+            item { SectionTitle("Suggested categories") }
+            item {
+                Text(
+                    text = "One tap to confirm. Nothing is filled in silently, and an app you " +
+                        "have already categorised is never suggested again.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            items(state.suggestions) { suggestion ->
+                SuggestionCard(suggestion, viewModel)
+            }
+        }
         item { SectionTitle("Assign apps") }
         if (state.apps.isEmpty()) {
             item { EmptyState("No apps found yet.") }
         } else {
             items(state.apps) { app ->
                 AppCategoryCard(app, state, viewModel)
+            }
+        }
+    }
+}
+
+@Composable
+fun SuggestionCard(suggestion: AppCategorySuggestion, viewModel: CategoryViewModel) {
+    AppCard {
+        Text(suggestion.label, style = MaterialTheme.typography.titleMedium)
+        Text(
+            suggestion.packageName,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            "Suggested: ${suggestion.category} — ${suggestion.reason}",
+            style = MaterialTheme.typography.bodySmall
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { viewModel.acceptSuggestion(suggestion) }) {
+                Text("Use ${suggestion.category}")
+            }
+            OutlinedButton(onClick = { viewModel.dismissSuggestion(suggestion) }) {
+                Text("Not now")
             }
         }
     }
