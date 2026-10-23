@@ -17,11 +17,11 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  */
 object DatabaseMigrations {
 
-    /** Current database version. Phase 8 adds the checklist tables (v5 → v6). */
-    const val CURRENT_VERSION = 6
+    /** Current database version. Phase 9 adds the capture inbox (v6 → v7). */
+    const val CURRENT_VERSION = 7
 
     /** Every version this build can open. A version outside this set fails. */
-    val SUPPORTED_VERSIONS: List<Int> = listOf(1, 2, 3, 4, 5, 6)
+    val SUPPORTED_VERSIONS: List<Int> = listOf(1, 2, 3, 4, 5, 6, 7)
 
     /**
      * v1 → v2 (Phase 2): notifications. Adds `settings`, `notification_rules`,
@@ -107,13 +107,27 @@ object DatabaseMigrations {
             "ON `completion_logs` (`occurrenceId`)"
     )
 
+    /**
+     * v6 → v7 (Phase 9): title-first capture. Adds `inbox_items`.
+     *
+     * One table, pure addition. An inbox item is an undated capture; scheduling it creates
+     * a task and removes the inbox row, which is why `checklist_tasks.dueDate` can stay
+     * `NOT NULL` and no existing table needs recreating.
+     */
+    val V6_TO_V7: List<String> = listOf(
+        "CREATE TABLE IF NOT EXISTS `inbox_items` (`id` TEXT NOT NULL, `title` TEXT NOT NULL, " +
+            "`domain` TEXT NOT NULL, `note` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, " +
+            "PRIMARY KEY(`id`))"
+    )
+
     /** Ordered steps, used by the tests to replay 1 → 6 statement by statement. */
     val STEPS: List<Step> = listOf(
         Step(1, 2, V1_TO_V2),
         Step(2, 3, V2_TO_V3),
         Step(3, 4, V3_TO_V4),
         Step(4, 5, V4_TO_V5),
-        Step(5, 6, V5_TO_V6)
+        Step(5, 6, V5_TO_V6),
+        Step(6, 7, V6_TO_V7)
     )
 
     data class Step(val from: Int, val to: Int, val statements: List<String>)

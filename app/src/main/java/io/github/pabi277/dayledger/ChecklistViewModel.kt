@@ -24,6 +24,10 @@ data class ChecklistUiState(
     val fullCount: Int = 0,
     val minimumCount: Int = 0,
     val skippedCount: Int = 0,
+    /** Undated captures waiting in the inbox (Phase 9). */
+    val inboxCount: Int = 0,
+    val lastCaptureId: String? = null,
+    val message: String? = null,
     /** The row whose optional-detail sheet is open, if any. */
     val evidenceFor: String? = null,
     /** The occurrence most recently acted on, so its row can offer Undo. */
@@ -40,6 +44,7 @@ data class ChecklistUiState(
  */
 class ChecklistViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = ChecklistRepository(DayLedgerDatabase.getInstance(app))
+    private val db = DayLedgerDatabase.getInstance(app)
     private val _state = MutableStateFlow(ChecklistUiState())
     val state: StateFlow<ChecklistUiState> = _state.asStateFlow()
 
@@ -71,6 +76,7 @@ class ChecklistViewModel(app: Application) : AndroidViewModel(app) {
                 fullCount = full,
                 minimumCount = minimum,
                 skippedCount = TodayBuckets.skippedCount(rows),
+                inboxCount = db.inboxDao().count(),
                 isLoading = false
             )
         } catch (e: Exception) {
@@ -133,12 +139,36 @@ class ChecklistViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * Phase 9: capture is title-first and lands in the Inbox, not on today.
+     *
+     * Phase 8 put the capture straight onto today's list, which quietly invented a deadline
+     * for something the owner had not scheduled. An undated capture now waits in the inbox
+     * until it is given a date, and the confirmation can be undone in one tap.
+     */
     fun quickCapture(title: String) {
         val clean = title.trim()
         if (clean.isEmpty()) return
         viewModelScope.launch {
             try {
-                repo.addTask(clean, LocalDate.now())
+                val id = repo.capture(clean)
+                _state.value = _state.value.copy(
+                    lastCaptureId = id,
+                    message = "Captured to Inbox"
+                )
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(error = e.message)
+            }
+            refresh()
+        }
+    }
+
+    fun undoCapture() {
+        val id = _state.value.lastCaptureId ?: return
+        viewModelScope.launch {
+            try {
+                repo.undoCapture(id)
+                _state.value = _state.value.copy(lastCaptureId = null, message = "Capture undone")
             } catch (e: Exception) {
                 _state.value = _state.value.copy(error = e.message)
             }

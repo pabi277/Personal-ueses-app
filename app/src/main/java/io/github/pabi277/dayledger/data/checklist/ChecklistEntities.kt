@@ -55,23 +55,23 @@ data class ChecklistTaskEntity(
 
 @Entity(tableName = "checklist_occurrences", indices = [Index("dateKey")])
 data class ChecklistOccurrenceEntity(
-    @PrimaryKey val id: String,
-    val dateKey: String,
-    /** habit | task */
+    @PrimaryKey override val id: String,
+    override val dateKey: String,
+    /** habit | task | carried */
     val kind: String,
     val sourceId: String,
     /** Snapshot, so editing or archiving a rule never rewrites history. */
-    val title: String,
+    override val title: String,
     val domain: String = "",
     val windowStartMin: Int? = null,
     val windowEndMin: Int? = null,
     val minimumLabel: String? = null,
-    /** pending | full | minimum | later | skipped */
-    val status: String = "pending",
+    /** pending | full | minimum | later | skipped | carried | scheduled | dropped */
+    override val status: String = "pending",
     val snoozeUntil: Long? = null,
     val generatedAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
-)
+) : ChecklistOccurrenceish
 
 @Entity(tableName = "completion_logs", indices = [Index("occurrenceId")])
 data class CompletionLogEntity(
@@ -90,6 +90,23 @@ data class CompletionLogEntity(
     val at: Long = System.currentTimeMillis()
 )
 
+/**
+ * Phase 9 — title-first capture that has not been organised yet.
+ *
+ * Kept as its own table rather than a nullable `dueDate` on `checklist_tasks`: making an
+ * existing `NOT NULL` column nullable would mean recreating that table inside a migration,
+ * and every migration in this project is a pure addition. Scheduling an inbox item is an
+ * explicit owner action that creates a task and removes the inbox row.
+ */
+@Entity(tableName = "inbox_items")
+data class InboxItemEntity(
+    @PrimaryKey val id: String,
+    val title: String,
+    val domain: String = "",
+    val note: String = "",
+    val createdAt: Long = System.currentTimeMillis()
+)
+
 /** Status/action vocabulary, shared by the repository, the UI and the tests. */
 object ChecklistValues {
     const val KIND_HABIT = "habit"
@@ -101,15 +118,34 @@ object ChecklistValues {
     const val STATUS_LATER = "later"
     const val STATUS_SKIPPED = "skipped"
 
+    // Phase 9 leftover outcomes. All three are settled for the day and all three are
+    // explicitly *not* completions (DL7, DL9).
+    /** Moved to another date; a `carried:` occurrence now holds it. */
+    const val STATUS_CARRIED = "carried"
+    /** Given a new date deliberately; the target occurrence holds it. */
+    const val STATUS_SCHEDULED = "scheduled"
+    /** Dropped on purpose. Never silently discarded — this is a recorded decision. */
+    const val STATUS_DROPPED = "dropped"
+
     const val ACTION_FULL = "full"
     const val ACTION_MINIMUM = "minimum"
     const val ACTION_LATER = "later"
     const val ACTION_SKIP = "skipped"
     const val ACTION_UNDO = "undo"
 
+    // Phase 9 actions, written to the same append-only log.
+    const val ACTION_MOVE = "move"
+    const val ACTION_SCHEDULE = "schedule"
+    const val ACTION_DROP = "drop"
+
     /** Statuses that are settled for the day; skipped is settled but is not a completion. */
     fun isClosed(status: String): Boolean =
-        status == STATUS_FULL || status == STATUS_MINIMUM || status == STATUS_SKIPPED
+        status == STATUS_FULL || status == STATUS_MINIMUM || status == STATUS_SKIPPED ||
+            status == STATUS_CARRIED || status == STATUS_SCHEDULED || status == STATUS_DROPPED
+
+    /** Closed by a day-close decision rather than by doing the work. */
+    fun isLeftoverOutcome(status: String): Boolean =
+        status == STATUS_CARRIED || status == STATUS_SCHEDULED || status == STATUS_DROPPED
 
     fun isCompleted(status: String): Boolean =
         status == STATUS_FULL || status == STATUS_MINIMUM

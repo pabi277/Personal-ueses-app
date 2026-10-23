@@ -84,6 +84,59 @@ fun PlanningScreen(state: PlanningUiState, viewModel: PlanningViewModel, dateKey
                 AddBlockForm(onAdd = { s, e, title -> viewModel.addBlock(s, e, title) })
             }
         }
+        item { SectionTitle("Checklist for this date") }
+        if (state.checklistItems.isEmpty()) {
+            item {
+                AppCard {
+                    io.github.pabi277.dayledger.ui.components.EmptyState(
+                        "Nothing scheduled. Habits, dated tasks and carried items appear here."
+                    )
+                }
+            }
+        } else {
+            items(state.checklistItems) { item ->
+                val isTop3 = state.top3.contains(item.id)
+                AppCard {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(item.title, style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                text = buildString {
+                                    append(item.kind)
+                                    item.windowStartMin?.let { append(" · ${minutesToTime(it)}") }
+                                    append(" · ${item.status}")
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        // Top 3 is a planning aid, so it lives with the date, not with Today.
+                        OutlinedButton(onClick = {
+                            if (isTop3) viewModel.removeFromTop3(item.id) else viewModel.addToTop3(item.id)
+                        }) { Text(if (isTop3) "Top 3 ✓" else "Top 3") }
+                    }
+                }
+            }
+        }
+        if (state.top3.isNotEmpty()) {
+            item {
+                AppCard(title = "Top 3") {
+                    Text(
+                        text = "At most three, by your choice. Not a limit on the day.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    state.top3.forEach { id ->
+                        val title = state.checklistItems.firstOrNull { it.id == id }?.title ?: id
+                        Text("• $title", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+        }
         item { SectionTitle("Blocks") }
         if (state.blocks.isEmpty()) {
             item { io.github.pabi277.dayledger.ui.components.EmptyState("No blocks for this day.") }

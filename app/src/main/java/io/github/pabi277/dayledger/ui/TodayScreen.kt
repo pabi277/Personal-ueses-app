@@ -75,7 +75,9 @@ fun TodayScreen(
     checklist: ChecklistUiState,
     usage: TodayUiState,
     checklistVm: ChecklistViewModel,
-    onRefreshUsage: () -> Unit
+    onRefreshUsage: () -> Unit,
+    onOpenInbox: () -> Unit = {},
+    onOpenDayClose: () -> Unit = {}
 ) {
     var capture by remember { mutableStateOf("") }
     var showEvidenceShown by remember { mutableStateOf(false) }
@@ -137,6 +139,23 @@ fun TodayScreen(
                     checklistVm.quickCapture(capture)
                     capture = ""
                 }) { Text("Add") }
+            }
+        }
+        item {
+            // Capture confirmation with Undo, plus the two Phase 9 entry points.
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                checklist.message?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall)
+                }
+                if (checklist.lastCaptureId != null) {
+                    TextButton(onClick = { checklistVm.undoCapture() }) { Text("Undo") }
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = onOpenInbox) {
+                    Text("Inbox (${checklist.inboxCount})")
+                }
+                OutlinedButton(onClick = onOpenDayClose) { Text("Close day") }
             }
         }
 

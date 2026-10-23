@@ -63,6 +63,8 @@ import io.github.pabi277.dayledger.ui.WeeklyReportScreen
 import io.github.pabi277.dayledger.ui.NotificationsScreen
 import io.github.pabi277.dayledger.ui.PlanningScreen
 import io.github.pabi277.dayledger.ui.HabitsScreen
+import io.github.pabi277.dayledger.ui.InboxScreen
+import io.github.pabi277.dayledger.ui.DayCloseScreen
 import io.github.pabi277.dayledger.ui.TodayScreen
 
 class MainActivity : ComponentActivity() {
@@ -90,6 +92,8 @@ fun DayLedgerApp() {
     val weeklyVm: WeeklyReportViewModel = viewModel()
     val checklistVm: ChecklistViewModel = viewModel()
     val habitsVm: HabitsViewModel = viewModel()
+    val inboxVm: InboxViewModel = viewModel()
+    val dayCloseVm: DayCloseViewModel = viewModel()
     val state by todayVm.state.collectAsState()
     val catState by categoryVm.state.collectAsState()
     val notifState by notificationVm.state.collectAsState()
@@ -100,6 +104,8 @@ fun DayLedgerApp() {
     val weeklyState by weeklyVm.state.collectAsState()
     val checklistState by checklistVm.state.collectAsState()
     val habitsState by habitsVm.state.collectAsState()
+    val inboxState by inboxVm.state.collectAsState()
+    val dayCloseState by dayCloseVm.state.collectAsState()
 
     var screen by remember { mutableStateOf(if (state.hasUsagePermission) "today" else "onboarding") }
 
@@ -251,8 +257,18 @@ fun DayLedgerApp() {
                 checklist = checklistState,
                 usage = state,
                 checklistVm = checklistVm,
-                onRefreshUsage = { todayVm.refresh() }
+                onRefreshUsage = { todayVm.refresh() },
+                onOpenInbox = { screen = "inbox" },
+                onOpenDayClose = { screen = "dayclose" }
             )
+            "inbox" -> {
+                InboxScreen(state = inboxState, viewModel = inboxVm, onBack = { screen = "today" })
+                LaunchedEffect(Unit) { inboxVm.load() }
+            }
+            "dayclose" -> {
+                DayCloseScreen(state = dayCloseState, viewModel = dayCloseVm, onBack = { screen = "today" })
+                LaunchedEffect(Unit) { dayCloseVm.load() }
+            }
             "habits" -> {
                 HabitsScreen(state = habitsState, viewModel = habitsVm)
                 LaunchedEffect(Unit) { habitsVm.load() }
@@ -287,6 +303,8 @@ fun DayLedgerApp() {
             "more" -> MoreScreen(
                 onOpen = { screen = it },
                 items = listOf(
+                    "inbox" to "Inbox",
+                    "dayclose" to "Close day",
                     "limits" to "Limits",
                     "earnings" to "Earn",
                     "learning" to "Learn",
