@@ -101,7 +101,48 @@ Counts: **86 unit tests** in the tree (was 67 before this phase: +19 checklist t
 The migration suite now proves every supported start version (1–6) reaches v6 with all
 rows intact, and the schema-drift test pins all 18 tables including the four new ones.
 
-**Owner device evidence:** none yet. Nothing in this record claims otherwise.
+**Owner device evidence (2026-10-23, vivo 1820, APK from `39908874710`):**
+
+| Done-means clause | Result | How it was seen |
+|---|---|---|
+| App opens after the v5 → v6 upgrade | ✅ | launched, first screen rendered |
+| Phase 7 data intact | ✅ | owner-reported backup |
+| First screen shows **Daily Logger** | ✅ | brand line above "Today" |
+| A one-off task is created from Quick Capture | ✅ | "ii" and "nothing" created as dated tasks |
+| Done needs no detail form | ✅ | "nothing" settled as **Full** with no required field |
+| Minimum is distinct from Full | ✅ | counted separately, "1 minimum" then "1 full" |
+| Undo is offered on a settled row | ✅ | visible on every settled row |
+| Skip is not a completion | ✅ | a skipped item shows no full/minimum count |
+| Restart adds no duplicates | ✅ | owner-reported count unchanged |
+| Usage numbers still match Digital Wellbeing | ✅ | owner-reported, no launcher/dialer rows |
+| F1 suggested categories | ✅ | owner-reported |
+
+**Three defects found by this smoke check, all fixed and re-run green:**
+
+1. **"Skipped, not done" sat under a heading called "Done"** (`396cb7a`). DL7 says Skip is
+   not a completion, so the grouping contradicted the row's own subtitle. Skipped items now
+   have their own section, and the summary reports them neutrally. Confirmed fixed on device
+   at 12:03: `Nothing left today · 1 full · 1 skipped`, with "Done" holding only the Full
+   row.
+2. **The weekday chips did not fit** (`11e18d3`). Seven chips in one `Row` overflowed a
+   360dp screen: Saturday was clipped and **Sunday was unreachable**, so a Sunday habit
+   could not be created at all. This is a UI Design v2 §2 violation ("reflow rather than
+   clip"). Chips now wrap, four per row.
+3. **The habit card printed raw data**: `Chosen days: 4` instead of `Chosen days: Thu`.
+   Fixed in the same commit via a unit-tested `weekdayNames`.
+
+A build error introduced while fixing (2) and (3) — a stray quote in `HabitsScreen.kt` —
+failed run `39912443671` and was corrected in `4d3fdbb`; both failures are kept in the
+record rather than hidden.
+
+**Still owed on device before ✅:**
+
+- **The positive half of generation.** The habit created on the device is Thursday-only
+  while the check ran on a Friday, so "no occurrence today" is *correct* but only proves the
+  negative direction. A habit must be created **on today's weekday** and appear on Today.
+- **Tomorrow's non-recurrence.** The two one-off tasks are dated 2026-10-23. They must not
+  appear on 2026-10-24. The Plan screen does not render checklist items at all (§6), so this
+  needs one look at Today tomorrow rather than a Plan screenshot.
 
 ## 6. What is deliberately edit-lite
 

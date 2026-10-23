@@ -199,7 +199,9 @@ Phase 15.
 > 86 unit tests, one signer `533D76ED5C2E264779EE005C…`, `room-schema` 2,378 B and
 > `app-progress-apk` 18,511,120 B. The schema-export guard that hardcoded `5.json` was
 > fixed after an owner gate answer and no longer pins a version. Phase 8 is **not** marked
-> ✅: no owner device evidence yet. Full record:
+> ✅: nine Done-means clauses passed on the owner's device, but the *positive* half of
+> generation (a habit appearing on its own scheduled day) and tomorrow's non-recurrence
+> are still owed. Three UI defects the smoke check caught are fixed. Full record:
 > [`docs/phases/08-checklist-core.md`](phases/08-checklist-core.md).
 
 **Parts**
