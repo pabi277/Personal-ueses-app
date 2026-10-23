@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SPDX-License-Identifier: MIT
+
+  API 31+ (Android 12+) backup and device-transfer rules. `cloud-backup` covers
+  Google/Android cloud backup; `device-transfer` covers phone-to-phone transfer
+  (including cable and the transfer tool). Both exclude every app-private domain,
+  so the usage history, plans, earnings, learning streak and settings never leave
+  the device through the OS. The only backup is the file the owner explicitly
+  exports through the app's Storage Access Framework flow.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="external" path="." />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="external" path="." />
+    </device-transfer>
+</data-extraction-rules>

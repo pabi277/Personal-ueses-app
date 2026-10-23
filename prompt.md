@@ -117,25 +117,51 @@
 - The 2026-10-22 phase plan places the full device-validation phase last
   (Phase 15). Phase 7 is data-safety/migration readiness; the existing P0
   real-device usage check remains a hard pre-feature gate before Phase 8.
-- The 2026-10-22 product and delivery gates are closed. This documentation
-  closure is documentation-only and does **not** start Phase 7. After the docs
-  merge gate and separate owner authorization, work on Phase 7 only; do not
-  implement checklist features before its migration, backup and signing/install
-  acceptance is met.
+- The 2026-10-22 product and delivery gates are closed, and PR #11 was merged
+  into `main` at `8070713`. Phase 7 is owner-authorised as of 2026-10-22 but
+  **stopped at its signing gate** before any implementation code; see
+  `docs/phases/07-data-safety-migration.md` and the ROADMAP status banner. Do not
+  implement checklist features before Phase 7's migration, backup and
+  signing/install acceptance is met.
 - The Phase 10 MVP use-gate is a separate 14-day real-use trial before Phase 11;
   agree measurable criteria before that trial. It does not replace original P0–P3.
-- Current-source audit: Phase 6's backup/restore claim is not demonstrated by the
-  tree (`MainActivity.kt` backup callback is empty and its CSV output is a
-  placeholder). Room is v5 with `exportSchema = false` and destructive fallback;
-  Android OS-backup exclusion is not implemented. Phase 7 must close these gaps
-  before any checklist schema change.
-- Signing audit status (2026-10-22): progress artifact metadata for runs
-  `39766581703` and `39766005737` is available, but archive downloads were blocked
-  by the sandbox's outbound-host allowlist, so certificate fingerprints are
-  unknown. Main run `38845505942` failed at signing-key preparation; no accessible
-  main signed-release artifact was found. Do not claim signing stability. If it is
-  unknown or unstable in Phase 7, stop at the owner gate and use secret names only.
+- Phase 7 closed the Phase 6 durability gap in code (2026-10-22): the Settings
+  backup writes a versioned JSON file covering every table, restore validates and
+  runs in one transaction, the CSV exports real rows, Room is v5 with
+  `exportSchema = true` and explicit `1→2→3→4→5` migrations and **no** destructive
+  fallback, and the manifest excludes all app-private data from OS backup and
+  device transfer. These are CI-proven; **device proof is still owed** — do not
+  describe them as verified on the owner's phone. Database version remains 5; any
+  later schema bump must add the next explicit migration and rerun the full
+  v1–v5 matrix before shipping.
+- Signing status (2026-10-23): **stable and owner-controlled.** Two runs of commit
+  `d773a12` produced the same `signer-533D76ED5C2E264779EE005C` artifact and the same
+  APK size, with `Prepare owner signing key` succeeding, so the progress APK and the
+  release path share one certificate. History below is kept as the evidence trail.
+- Signing status (2026-10-22, Phase 7 gate): the gate failed on evidence — the
+  progress APK was signed by an AGP-generated debug key recreated on every runner
+  (no keystore restore, no `signingConfigs`), and `main` run `39771615912` failed
+  with `Missing required Actions secret: ANDROID_KEYSTORE_BASE64` (only that name
+  is proven absent; the loop exits at the first empty one). Artifact downloads are
+  still blocked here (`*.blob.core.windows.net`), so no fingerprint is known. The
+  owner answered the gate: data is **valuable** and one owner-controlled identity
+  is **approved**. Round 2 therefore wired the plumbing only — an `owner`
+  `signingConfigs` entry used by **both** debug and release, gated on
+  `ANDROID_KEYSTORE_PATH` plus the four secret names, a runner keystore restore in
+  both jobs, and an `apksigner` SHA-256 certificate fingerprint written to the log
+  and the artifact (fingerprints are public; keystore values are not). No Phase 7
+  feature code was written: with valuable installed data, the first owner-key
+  install needs one uninstall, so an ADB `run-as` database rescue must be verified
+  first (`docs/phases/07-data-safety-migration.md` §6b). Update-over-install is
+  **not** yet proven, and the two-run fingerprint comparison is still owed.
 
+- **Owner decision 2026-10-23 — suggested default categories (R2a):** categories are
+  **suggested, not silently filled**; the owner accepts with one tap. Scheduled **after
+  Phase 7 closes**, using only `ApplicationInfo.category` plus the system-life-app rule,
+  never overwriting an existing assignment, no suggestion when ambiguous, earning apps
+  never auto-suggested. Do not implement it inside the data-safety phase and do not
+  re-ask the choice. Follow-up queue is in `docs/ROADMAP.md` (R2a, the missing per-app
+  `limitMin` write path, and checking in the canonical Room schema).
 - Owner-local setup remains optional and on-device: enabled domains, timetable,
   app lists, reminder windows and routines are not committed or asked as a blocking
   chat questionnaire. The Phase 4 Accessibility path remains optional/fragile;
@@ -148,11 +174,23 @@
 1. Read `docs/REQUIREMENTS.md`, `docs/ROADMAP.md`, `docs/DECISIONS.md`,
    `docs/UI_DESIGN.md` and the latest `docs/phases/` record — trust the repo, not
    memory. Ask nothing that is already recorded.
-2. This documentation-closure round must pass its PR review/merge gate first. Do
-   not start Phase 7 until the owner separately authorizes that phase. Then
-   implement **Phase 7 only** (data safety and migration foundation),
-   evidence-first. Keep the full device matrix at Phase 15 and preserve P0 before
-   Phase 8.
+2. Phase 7 is **complete except its P0 item**. Parts 7.1–7.5 are implemented and
+   CI-verified (latest green `39900306233`, 30 tests), the signing gate is closed by
+   evidence (four runs, one signer `533D76ED5C2E264779EE005C…`), and the owner reports
+   on device: install, launch, a complete 14-table/538-row backup, a refused bad file,
+   update-over-install of a later owner-keyed APK, and a restore corroborated by his own
+   exports (seven historical days identical after clear-data; six configuration tables
+   row-for-row identical). Per-app categories were silently discarded before the fix (the
+   UPDATE matched zero rows), so they need one re-entry on device; per-app `limitMin` has
+   no write path at all, a Phase 4 scope question for the P0/Phase 8 conversation. Also
+   fixed in this
+   phase: `app_info` had been empty since Phase 1 because `INSERT OR IGNORE` silently
+   dropped every row that omitted the NOT NULL `alwaysAllowed` column (found from the
+   owner's backup; `6a9f708`). **Still owed:** the P0 comparison (Today's total and top
+   app vs Digital Wellbeing, ~10 %) on the `39900306233` APK — that is the one item
+   keeping Phase 7 🚧 and it also gates Phase 8. Do not mark Phase 7 ✅ without it, and
+   never commit the owner's backup JSON or secret values. Keep the full device matrix
+   at Phase 15.
 3. End each implementation phase with CI green and its `app-progress-apk`; the
    owner installs it and records a short smoke check plus the phase-specific
    evidence in the phase record. Update roadmap/prompt and stop at the merge gate.

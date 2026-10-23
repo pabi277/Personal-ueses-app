@@ -178,6 +178,19 @@
 
 ## Agent decisions (reversible — object and they change)
 
+- 2026-10-22 — **Phase 7 data-safety implementation choices** (all reversible on
+  objection): (a) migrations stay **additive-only** — explicit `1→2→3→4→5` steps
+  that create tables and never rewrite a row, because the full git history shows
+  no column was ever renamed, retyped or dropped; (b) database version stays **5**
+  and `fallbackToDestructiveMigration()` is removed so an unknown schema fails
+  loudly instead of wiping history; (c) the backup file is **in-tree JSON**
+  (`formatVersion` 1 envelope + `schemaVersion`, app-id stamped) rather than a new
+  dependency, so the restore path is unit-testable on the JVM; (d) restore is
+  **transactional and refuses before deleting** anything when the file is from a
+  newer schema, another app, or cannot fill a required column; (e) OS backup is
+  excluded twice (`allowBackup=false` plus explicit per-domain rules) so a later
+  manifest edit cannot silently re-enable it.
+
 - 2026-10-15 — **Playbook pin** — the launcher's `<SHA>` placeholder arrived
   unreplaced, so the pin was resolved to AppFlow `main` tip
   `c8856022ca57cdf23ae78b9491481543db89438d` (2026-10-11) and every playbook
@@ -282,6 +295,21 @@
   paise, local-date keys, append-only history, every aggregate recomputable from raw
   rows and unit-tested. Sketch only — no code in plan docs. Reversible.
 
+## Owner update — default categories (2026-10-23)
+
+- **Asked:** whether app categories should be filled in "by default" instead of being
+  assigned app by app. **Answer: suggestions the owner confirms — not silent auto-fill**,
+  and the work is scheduled **after Phase 7 closes**, not inside the data-safety phase.
+- Recorded as **R2a** in `docs/REQUIREMENTS.md`. Rationale kept with the decision:
+  silently pre-filling would make the app's own guess look like the owner's judgement,
+  and the Categories screen is the one place where his intent is the data. A suggestion
+  he taps is unambiguously his.
+- Constraints carried into that work: use only the device's own
+  `ApplicationInfo.category` plus the system-life-app rule, never a committed list of
+  real third-party packages, never overwrite or re-suggest an existing assignment, give
+  **no** suggestion when the signal is ambiguous, and never auto-suggest earning apps.
+- Trigger for starting it: Phase 7 marked ✅ (its P0 item) and merged.
+
 ## Open (current owner gates)
 
 - The 2026-10-15 decision batches and the 2026-10-22 product/delivery gate answers
@@ -297,6 +325,14 @@
   update-over-install proof or owner-approved data-preserving procedure; and the
   P0 owner-device check before Phase 8. If signing continuity is unknown or
   unstable, stop at the owner gate in `docs/ROADMAP.md`.
+- **OPEN — Phase 7 signing gate (2026-10-22).** Evidence gathered in
+  `docs/phases/07-data-safety-migration.md` shows the progress APK signer is a
+  per-runner throwaway debug key and the release job is missing the secret name
+  `ANDROID_KEYSTORE_BASE64` while Gradle has no `signingConfigs`, so no stable
+  identity exists. Awaiting, from the owner only: the device update-over-install
+  result (both run IDs), the installed data's value (disposable / valuable /
+  absent) and approval of the one-key owner-controlled identity. No signing,
+  workflow or Gradle change is made before that answer.
 - Phases 7–15 have no fixed calendar deadline. Before the 14-day real-use gate
   after Phase 10, agree its measurable criteria; it does not replace P0–P3.
 - Owner-local domains, routines, tasks, app lists and reminder windows remain

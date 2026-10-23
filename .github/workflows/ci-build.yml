@@ -5,11 +5,19 @@
 # downloadable debug APK artifact (`app-progress-apk`): the owner sideloads it
 # to SEE the phase's increment. It is progress, not a release. Signed release
 # artifacts build on main only.
-# Release signing config must read ANDROID_KEYSTORE_PATH plus the four secret
-# environment variables below in Gradle; fail release builds if they are absent.
-# Configure these GitHub Actions secrets; never commit their values:
+#
+# ONE signing identity. The owner creates one keystore OUTSIDE this repository and
+# stores it in the four GitHub Actions secrets named below; Gradle reads
+# ANDROID_KEYSTORE_PATH plus those four values and signs BOTH the progress APK and
+# the signed release with it, so each later APK installs as an update over the
+# previous one instead of needing an uninstall. Configure these secret NAMES and
+# never commit their values:
 # ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS,
 # ANDROID_KEY_PASSWORD.
+# The release job fails hard when any of them is missing. The progress job still
+# builds without them (every phase must upload an APK) but warns that the artifact
+# uses a throwaway debug key, and both jobs print the APK's SHA-256 certificate
+# fingerprint into the log and into the uploaded artifact.
 name: Android CI
 
 on:
@@ -31,6 +39,11 @@ jobs:
   test:
     name: Unit tests, debug build, progress APK
     runs-on: ubuntu-latest
+    env:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -45,6 +58,89 @@ jobs:
           echo "ANDROID_HOME=$ANDROID_HOME"
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
           ls "$ANDROID_HOME/platforms" || true
+      - name: Prepare owner signing key on runner
+        shell: bash
+        run: |
+          set -uo pipefail
+          exec > >(tee -a /tmp/build.log) 2>&1
+          if [[ -z "${ANDROID_KEYSTORE_BASE64:-}" ]]; then
+            echo "::warning::Owner signing secrets are absent: this app-progress-apk is signed by a throwaway debug key and CANNOT be installed over an owner-key build. Add the four repository secrets named in the workflow header."
+            exit 0
+          fi
+          for name in ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::Missing required Actions secret: $name"
+              exit 1
+            fi
+          done
+          KEYSTORE_PATH="$RUNNER_TEMP/owner-sideload.jks"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH" 2>/dev/null || true
+          if [[ ! -s "$KEYSTORE_PATH" ]]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 did not decode to a file. Re-paste the one-line output of: base64 -w0 dayledger-owner.jks"
+            exit 1
+          fi
+          chmod 600 "$KEYSTORE_PATH"
+
+          # Diagnose the keystore without printing any secret value: type/magic,
+          # whether the store password opens it, whether the alias exists, and
+          # whether the key password unlocks THAT alias.
+          MAGIC=$(head -c 4 "$KEYSTORE_PATH" | od -An -tx1 | tr -d ' \n')
+          case "$MAGIC" in
+            feedfeed) TYPE="JKS" ;;
+            3082*|3081*) TYPE="PKCS12" ;;
+            *) TYPE="unknown(magic $MAGIC)" ;;
+          esac
+          echo "keystore: ${#ANDROID_KEYSTORE_BASE64} base64 chars, $(wc -c < "$KEYSTORE_PATH") bytes, type $TYPE"
+          # Also surface it as an annotation: step logs are not always readable,
+          # and this distinguishes a truncated paste from a wrong password.
+          echo "::warning title=keystore file::type=$TYPE bytes=$(wc -c < "$KEYSTORE_PATH") base64chars=${#ANDROID_KEYSTORE_BASE64}"
+
+          # A password pasted in a browser field very often carries a trailing
+          # newline or space. Try the secret exactly as stored, then the trimmed
+          # form; if only the trimmed form works, use it and say so, instead of
+          # failing on an invisible character. No value is ever printed.
+          STORE_PASS_RAW="$ANDROID_KEYSTORE_PASSWORD"
+          STORE_PASS_TRIMMED=$(printf '%s' "$ANDROID_KEYSTORE_PASSWORD" | tr -d '\r\n' | sed -E 's/[[:space:]]+$//')
+          if keytool -list -keystore "$KEYSTORE_PATH" -storepass "$STORE_PASS_RAW" > "$RUNNER_TEMP/kt.txt" 2>"$RUNNER_TEMP/kt.err"; then
+            STORE_PASS="$STORE_PASS_RAW"
+          elif keytool -list -keystore "$KEYSTORE_PATH" -storepass "$STORE_PASS_TRIMMED" > "$RUNNER_TEMP/kt.txt" 2>"$RUNNER_TEMP/kt.err"; then
+            STORE_PASS="$STORE_PASS_TRIMMED"
+            HAS_CRLF=no
+            printf '%s' "$ANDROID_KEYSTORE_PASSWORD" | grep -q $'\r' && HAS_CRLF=yes
+            echo "::warning title=ANDROID_KEYSTORE_PASSWORD has stray whitespace::the secret works only after trimming (length ${#STORE_PASS_RAW} -> ${#STORE_PASS}; carriage return present: $HAS_CRLF). Signing continues with the trimmed value. Re-set the secret with: printf '%s' \"<password>\" | gh secret set ANDROID_KEYSTORE_PASSWORD"
+          else
+            echo "::error::ANDROID_KEYSTORE_PASSWORD does not open the keystore, even after trimming whitespace. The keystore itself is fine (size/type above), so either the password in the secret is not the one used when the key was created, or the base64 secret is from a different keystore. Verify locally: keytool -list -keystore ~/dayledger-owner.jks"
+            sed -E 's/password[^,]*/password ***/g' "$RUNNER_TEMP/kt.err" | head -n 5 || true
+            exit 1
+          fi
+          if ! grep -Fq "$(printf '%s' "$ANDROID_KEY_ALIAS" | tr -d '\r\n' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')" "$RUNNER_TEMP/kt.txt"; then
+            echo "::error::ANDROID_KEY_ALIAS is not an alias inside this keystore. The aliases it contains (names only):"
+            grep -E "^[^ ].*," "$RUNNER_TEMP/kt.txt" | sed -E 's/,.*//' | sed 's/^/  - /' || true
+            exit 1
+          fi
+          KEY_PASS_TRIMMED=$(printf '%s' "$ANDROID_KEY_PASSWORD" | tr -d '\r\n' | sed -E 's/[[:space:]]+$//')
+          ALIAS_TRIMMED=$(printf '%s' "$ANDROID_KEY_ALIAS" | tr -d '\r\n' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')
+          if keytool -certreq -keystore "$KEYSTORE_PATH" -storepass "$STORE_PASS" \
+                 -alias "$ALIAS_TRIMMED" -keypass "$ANDROID_KEY_PASSWORD" -file "$RUNNER_TEMP/req.csr" >/dev/null 2>"$RUNNER_TEMP/kt2.err"; then
+            KEY_PASS="$ANDROID_KEY_PASSWORD"
+          elif keytool -certreq -keystore "$KEYSTORE_PATH" -storepass "$STORE_PASS" \
+                 -alias "$ALIAS_TRIMMED" -keypass "$KEY_PASS_TRIMMED" -file "$RUNNER_TEMP/req.csr" >/dev/null 2>"$RUNNER_TEMP/kt2.err"; then
+            KEY_PASS="$KEY_PASS_TRIMMED"
+            echo "::warning title=ANDROID_KEY_PASSWORD has stray whitespace::the secret works only after trimming; signing continues with the trimmed value."
+          else
+            echo "::error::ANDROID_KEY_PASSWORD does not unlock ANDROID_KEY_ALIAS. If you pressed Enter when creating the key, the key password equals the store password; otherwise use the key password you typed."
+            head -n 3 "$RUNNER_TEMP/kt2.err" | sed -E 's/password[^,]*/password ***/g' || true
+            exit 1
+          fi
+          rm -f "$RUNNER_TEMP/kt.txt" "$RUNNER_TEMP/kt.err" "$RUNNER_TEMP/kt2.err" "$RUNNER_TEMP/req.csr"
+          echo "Owner signing key verified: store password ok, alias found, key password ok."
+          echo "ANDROID_KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
+          # Gradle signs with the values that were proven to work above.
+          {
+            printf 'ANDROID_KEYSTORE_PASSWORD=%s\n' "$STORE_PASS"
+            printf 'ANDROID_KEY_ALIAS=%s\n' "$ALIAS_TRIMMED"
+            printf 'ANDROID_KEY_PASSWORD=%s\n' "$KEY_PASS"
+          } >> "$GITHUB_ENV"
       - name: Run unit tests and build debug APK
         run: |
           chmod +x ./gradlew
@@ -55,14 +151,123 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh issue create --repo pabi277/Personal-ueses-app --title "CI build failure" --body "$(tail -n 150 /tmp/build.log)" || true
+          {
+            echo "## Build log tail"
+            echo '```'
+            tail -n 100 /tmp/build.log || true
+            echo '```'
+            echo "## Failing unit tests (name + first lines of the failure)"
+            echo '```'
+            for f in app/build/test-results/testDebugUnitTest/*.xml; do
+              [ -f "$f" ] || continue
+              grep -o 'testcase name="[^"]*"' "$f" | sed 's/testcase name=//' | head -60 || true
+              sed -n '/<failure/,/<\/failure>/p' "$f" | head -80 || true
+              sed -n '/<error/,/<\/error>/p' "$f" | head -40 || true
+            done
+            echo '```'
+          } > /tmp/report.md
+          gh issue create --repo pabi277/Personal-ueses-app --title "CI build failure" --body-file /tmp/report.md || true
+      - name: Record APK signing certificate
+        run: |
+          set -uo pipefail
+          OUT="$RUNNER_TEMP/signing-certificate.txt"
+          REPORT="$RUNNER_TEMP/signing-report.txt"
+          APK=$(ls app/build/outputs/apk/debug/*.apk 2>/dev/null | head -n 1 || true)
+          # Gradle's own signing report needs no SDK tooling and prints the SHA-256
+          # of the certificate that actually signed the debug variant.
+          ./gradlew --no-daemon signingReport > "$REPORT" 2>&1 || true
+          {
+            echo "apk: $(basename "${APK:-missing}")"
+            echo "workflow run: $GITHUB_RUN_ID"
+            echo "commit: $GITHUB_SHA"
+            if [[ -n "${ANDROID_KEYSTORE_PATH:-}" ]]; then
+              echo "signing mode: owner keystore"
+            else
+              echo "signing mode: throwaway debug key (owner secrets absent)"
+            fi
+            echo "--- gradle signingReport (SHA-256 lines) ---"
+            grep -iE "Variant:|Config:|Store:|Alias:|SHA-256:" "$REPORT" || true
+          } | tee "$OUT"
+          FINGERPRINT=$(grep -iE "SHA-256:" "$OUT" | head -n 1 || true)
+          SHORT=$(printf '%s' "$FINGERPRINT" | sed -E 's/.*SHA-256://' | tr -cd '0-9A-Fa-f' | cut -c1-24 || true)
+          if [[ -z "$SHORT" && -n "$APK" ]]; then
+            # Fallbacks: apksigner from the SDK, then keytool on the v1 signature.
+            APKSIGNER=$(find /usr/local/lib/android /opt/android-sdk "${ANDROID_HOME:-/nonexistent}" "${ANDROID_SDK_ROOT:-/nonexistent}" -maxdepth 6 -name apksigner -type f 2>/dev/null | sort -V -r | head -n 1 || true)
+            if [[ -n "$APKSIGNER" ]]; then
+              "$APKSIGNER" verify --print-certs "$APK" 2>&1 | grep -iE "signer #1 certificate (DN|SHA-256)" | tee -a "$OUT" || true
+            else
+              keytool -printcert -jarfile "$APK" 2>&1 | tee -a "$OUT" || true
+            fi
+            FINGERPRINT=$(grep -iE "SHA-256 digest:|SHA256:" "$OUT" | head -n 1 || true)
+            SHORT=$(printf '%s' "$FINGERPRINT" | sed -E 's/.*(SHA-256 digest:|SHA256:)//' | tr -cd '0-9A-Fa-f' | cut -c1-24 || true)
+          fi
+          [[ -n "$SHORT" ]] || SHORT="unknown"
+          if [[ "$SHORT" == "unknown" ]]; then
+            echo "::warning::No certificate fingerprint could be extracted; see signing-certificate.txt"
+          else
+            echo "::notice title=APK signer SHA-256::${FINGERPRINT} (run $GITHUB_RUN_ID, commit ${GITHUB_SHA:0:7})"
+          fi
+          echo "SIGNER_SHA256_SHORT=$SHORT" >> "$GITHUB_ENV"
+          echo "SIGNING_CERT_FILE=$OUT" >> "$GITHUB_ENV"
+          echo "APK signer SHA-256 (first 24 hex): $SHORT"
+      - name: Publish signing certificate evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: signer-${{ env.SIGNER_SHA256_SHORT }}
+          path: ${{ runner.temp }}/signing-certificate.txt
+          if-no-files-found: warn
+          retention-days: 90
+      - name: Verify OS-backup exclusion in the merged manifest
+        run: |
+          set -uo pipefail
+          MANIFEST=$(find app/build/intermediates -path "*merged*" -name AndroidManifest.xml | head -n 1)
+          if [[ -z "$MANIFEST" ]]; then
+            echo "::error::Could not find a merged manifest to verify."
+            exit 1
+          fi
+          echo "Verifying $MANIFEST"
+          grep -o 'android:allowBackup="[^"]*"' "$MANIFEST" || true
+          grep -o 'android:fullBackupContent="[^"]*"' "$MANIFEST" || true
+          grep -o 'android:dataExtractionRules="[^"]*"' "$MANIFEST" || true
+          fail=0
+          grep -q 'android:allowBackup="false"' "$MANIFEST" || { echo "::error::allowBackup is not false in the merged manifest"; fail=1; }
+          grep -q 'android:fullBackupContent="@xml/backup_rules"' "$MANIFEST" || { echo "::error::fullBackupContent is not wired to @xml/backup_rules"; fail=1; }
+          grep -q 'android:dataExtractionRules="@xml/data_extraction_rules"' "$MANIFEST" || { echo "::error::dataExtractionRules is not wired to @xml/data_extraction_rules"; fail=1; }
+          APK=$(ls app/build/outputs/apk/debug/*.apk 2>/dev/null | head -n 1 || true)
+          AAPT2=$(ls -d "$ANDROID_HOME"/build-tools/* 2>/dev/null | sort -V | tail -n 1)
+          if [[ -n "$AAPT2" && -x "$AAPT2/aapt2" ]]; then
+            echo "--- backup flags as packaged in the APK ---"
+            "$AAPT2" dump xmltree --file AndroidManifest.xml "$APK" 2>/dev/null | grep -iE "allowBackup|fullBackupContent|dataExtractionRules" || true
+          fi
+          exit $fail
+      - name: Record Room schema export
+        run: |
+          set -uo pipefail
+          ls -l app/schemas/*/ || true
+          SCHEMA=$(find app/schemas -name "5.json" | head -n 1)
+          if [[ -z "$SCHEMA" ]]; then
+            echo "::error::Room did not export the v5 schema"
+            exit 1
+          fi
+          echo "Exported: $SCHEMA"
+          echo "identityHash in the exported schema:"
+          grep -o '"identityHash": "[^"]*"' "$SCHEMA" || true
       - name: Upload progress APK (the downloadable result of this phase)
         uses: actions/upload-artifact@v4
         with:
           name: app-progress-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: |
+            app/build/outputs/apk/debug/*.apk
+            ${{ runner.temp }}/signing-certificate.txt
           if-no-files-found: error
           retention-days: 30
+      - name: Upload Room schema export
+        uses: actions/upload-artifact@v4
+        with:
+          name: room-schema
+          path: app/schemas
+          if-no-files-found: error
+          retention-days: 90
 
   signed-release:
     name: Signed release AAB and APK
@@ -107,6 +312,30 @@ jobs:
         run: |
           chmod +x ./gradlew
           ./gradlew --no-daemon bundleRelease assembleRelease
+      - name: Record release signing certificate
+        run: |
+          set -uo pipefail
+          APK=$(ls app/build/outputs/apk/release/*.apk 2>/dev/null | head -n 1 || true)
+          OUT="$RUNNER_TEMP/signing-certificate.txt"
+          echo "signing mode: owner keystore" | tee "$OUT"
+          if [[ -z "$APK" ]]; then
+            echo "::error::No release APK found to inspect (was it signed?)."
+            exit 1
+          fi
+          APKSIGNER=$(find /usr/local/lib/android /opt/android-sdk "${ANDROID_HOME:-/nonexistent}" "${ANDROID_SDK_ROOT:-/nonexistent}" -maxdepth 6 -name apksigner -type f 2>/dev/null | sort -V -r | head -n 1 || true)
+          {
+            if [[ -n "$APKSIGNER" ]]; then
+              "$APKSIGNER" verify --print-certs "$APK" 2>&1 | grep -Ei "signer #1 certificate" || true
+            else
+              keytool -printcert -jarfile "$APK" 2>&1 | tail -n 25 || true
+            fi
+          } | tee -a "$OUT"
+          FINGERPRINT=$(grep -iE "(SHA-256 digest|SHA256:)" "$OUT" | head -n 1 || true)
+          if [[ -n "$FINGERPRINT" ]]; then
+            echo "::notice title=Release signer SHA-256::${FINGERPRINT} (run $GITHUB_RUN_ID, commit ${GITHUB_SHA:0:7})"
+          else
+            echo "::warning::No release certificate fingerprint could be extracted."
+          fi
       - name: Upload signed release artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -114,5 +343,6 @@ jobs:
           path: |
             app/build/outputs/bundle/release/*.aab
             app/build/outputs/apk/release/*.apk
+            ${{ runner.temp }}/signing-certificate.txt
           if-no-files-found: error
           retention-days: 14

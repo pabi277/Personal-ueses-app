@@ -1,9 +1,35 @@
+import java.io.File
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
 }
+
+// One stable, owner-controlled sideload identity.
+//
+// The owner creates the keystore OUTSIDE this repository and stores it in the
+// four GitHub Actions secrets named below; CI decodes it to a temporary file and
+// exports ANDROID_KEYSTORE_PATH. When all four are present, BOTH the debug
+// `app-progress-apk` and the signed release are signed with that one key, so every
+// later APK installs as an update over the previous one. No value is ever read
+// from, written to, or committed in this repository.
+//
+// Without the secrets the build still runs (CI must always upload a progress APK)
+// but falls back to AGP's throwaway debug key, which cannot be installed over an
+// owner-key build; the workflow warns loudly in that case.
+val ownerKeystorePath: String? = System.getenv("ANDROID_KEYSTORE_PATH")
+val ownerKeystorePassword: String? = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+val ownerKeyAlias: String? = System.getenv("ANDROID_KEY_ALIAS")
+val ownerKeyPassword: String? = System.getenv("ANDROID_KEY_PASSWORD")
+
+val ownerKeystoreFile = ownerKeystorePath?.let { File(it) }
+val hasOwnerSigning: Boolean =
+    ownerKeystoreFile?.isFile == true &&
+        !ownerKeystorePassword.isNullOrBlank() &&
+        !ownerKeyAlias.isNullOrBlank() &&
+        !ownerKeyPassword.isNullOrBlank()
 
 android {
     namespace = "io.github.pabi277.dayledger"
@@ -18,8 +44,39 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        // Keep a v1 (JAR) signature on the progress APK as well as v2. With
+        // minSdk 26 AGP would otherwise emit v2 only, which is fine for installs
+        // but leaves nothing for `keytool -printcert -jarfile` to read — and the
+        // certificate fingerprint is the evidence that signing is stable.
+        getByName("debug") {
+            enableV1Signing = true
+            enableV2Signing = true
+        }
+        if (hasOwnerSigning) {
+            create("owner") {
+                storeFile = ownerKeystoreFile
+                storePassword = ownerKeystorePassword
+                keyAlias = ownerKeyAlias
+                keyPassword = ownerKeyPassword
+                // The progress APK is a debug variant that the owner sideloads; the
+                // whole point of this config is that it keeps ONE certificate.
+                enableV1Signing = true
+                enableV2Signing = true
+            }
+        }
+    }
+
     buildTypes {
+        debug {
+            if (hasOwnerSigning) {
+                signingConfig = signingConfigs.getByName("owner")
+            }
+        }
         release {
+            if (hasOwnerSigning) {
+                signingConfig = signingConfigs.getByName("owner")
+            }
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -36,6 +93,14 @@ android {
     buildFeatures {
         compose = true
     }
+
+}
+
+// Room schema export (Phase 7 part 7.1). The exported JSON is the baseline that
+// future schema versions must migrate from, and the JVM migration tests compare
+// the migrated tables against it.
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 dependencies {
@@ -62,6 +127,9 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
     testImplementation("junit:junit:4.13.2")
+    // Real SQLite on the JVM so migrations and the restore planner are tested
+    // against actual SQL rather than mocks.
+    testImplementation("org.xerial:sqlite-jdbc:3.46.1.3")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
     androidTestImplementation(platform("androidx.compose:compose-bom:2024.12.01"))

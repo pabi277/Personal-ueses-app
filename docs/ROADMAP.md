@@ -62,6 +62,26 @@ Bootstrapped from AppFlow @ c8856022ca57cdf23ae78b9491481543db89438d on 2026-10-
 
 ### Phase 7 — Data safety and migration foundation (no checklist features)
 
+> 🚧 **Status: parts 7.1–7.5 complete, CI-verified and exercised on the owner's
+> device; only the P0 comparison remains (2026-10-23).** The signing gate failed first
+> and was closed by evidence afterwards: progress APKs were signed by a per-runner
+> throwaway key (measured — `DC13157E…` vs `B988DBD3…` on one tree) and the release job
+> was missing the name `ANDROID_KEYSTORE_BASE64`; the owner then created a keystore
+> outside the repo and set the four secret names, and four runs across three commits now
+> print one signer, `533D76ED5C2E264779EE005C…`. Phase 7 work, all CI-verified: Room v5
+> schema export; explicit non-destructive `1→2→3→4→5` migrations with the destructive
+> fallback removed (no version bump); versioned SAF backup/restore over every table and
+> setting; `allowBackup="false"` plus legacy/API-31 extraction rules verified in the
+> merged manifest; and a `fix(data)` for `app_info` rows that `INSERT OR IGNORE` had been
+> silently dropping since Phase 1, found from the owner's own backup. **On device:** install + launch, a complete backup
+> (14 tables/538 rows, then 613 rows after the fix), a non-backup file refused,
+> update-over-install of a later owner-keyed APK, and a restore corroborated by the
+> owner's own exports — seven historical days return identical after clear-data and six
+> configuration tables return row-for-row identical; the `app_info` fix shows 0 → 72
+> labelled rows. **Outstanding to mark Done:** the P0 number comparison against Digital Wellbeing that this phase's
+> Done-means requires before Phase 8. Evidence:
+> [`docs/phases/07-data-safety-migration.md`](phases/07-data-safety-migration.md).
+
 #### Historical Room inventory (verified from Git history, 2026-10-22)
 
 The database was introduced in Phase 1 and is still Room version 5 in Phase 6.
@@ -159,6 +179,14 @@ version bump or checklist-table migration ships in this phase; the visible label
 stays Day Ledger. A later checklist schema increment must add an explicit migration
 from v5 and rerun the full supported-source matrix. The full device matrix remains
 Phase 15.
+
+### Follow-up queue (owner-directed, after Phase 7 closes)
+
+| # | Item | Scope | Status |
+|---|---|---|---|
+| F1 | **R2a — suggested default categories** (owner, 2026-10-23): the Categories screen suggests a category per unclassified app from the device's `ApplicationInfo.category` + system-life-app rule; the owner accepts with one tap; existing assignments are never overwritten or re-suggested; ambiguous apps get no suggestion; earning apps are never auto-suggested. No schema change, no new permission, mapping unit-tested with fictional packages. | small increment, after Phase 7 | 📋 planned |
+| F2 | **Per-app `limitMin` has no write path** — the Limits screen only toggles always-allowed, so R16's per-app limits are unimplemented rather than unpersisted. Needs an owner decision on whether Phase 8 or a dedicated limits increment implements it. | Phase 4 scope | 📋 planned |
+| F3 | **Check in the canonical Room schema** (`app/schemas/…/5.json`) — CI exports and verifies it every run, but the file is not in the tree because artifact downloads are blocked in the agent's environment. One download closes it. | housekeeping | 📋 planned |
 
 ### Phase 8 — Checklist core
 

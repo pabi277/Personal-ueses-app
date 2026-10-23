@@ -1,6 +1,7 @@
 package io.github.pabi277.dayledger
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -38,7 +39,18 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import io.github.pabi277.dayledger.backup.BackupCodec
+import io.github.pabi277.dayledger.backup.BackupService
+import io.github.pabi277.dayledger.backup.RestoreOutcome
+import io.github.pabi277.dayledger.data.DayLedgerDatabase
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.pabi277.dayledger.ui.CategoriesScreen
@@ -87,15 +99,89 @@ fun DayLedgerApp() {
     var screen by remember { mutableStateOf(if (state.hasUsagePermission) "today" else "onboarding") }
 
     val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = rememberCoroutineScope()
+    val database = remember { DayLedgerDatabase.getInstance(context) }
+    val backupService = remember { BackupService(database) }
+    var dataStatus by remember { mutableStateOf("") }
+
+    fun appVersionName(): String = try {
+        context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "unknown"
+    } catch (e: Exception) {
+        "unknown"
+    }
+
+    // Real CSV export of the stored usage rows (the Phase 6 placeholder is gone).
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
         if (uri != null) {
-            try {
-                context.contentResolver.openOutputStream(uri)?.use { os ->
-                    os.write("date,package,minutes\n".toByteArray())
-                    // best-effort: write today's usage
-                    os.write("today,placeholder,0\n".toByteArray())
+            scope.launch(Dispatchers.IO) {
+                val message = try {
+                    val rows = database.usageDao().allRows()
+                    context.contentResolver.openOutputStream(uri)?.use { os ->
+                        val writer = os.bufferedWriter()
+                        writer.write("dateKey,packageName,foregroundMinutes,pickups,longestSessionMin,source\n")
+                        for (row in rows) {
+                            writer.write(
+                                "${row.dateKey},${row.packageName},${row.foregroundMinutes}," +
+                                    "${row.pickups},${row.longestSessionMin},${row.source}\n"
+                            )
+                        }
+                        writer.flush()
+                    }
+                    "CSV exported: ${rows.size} usage rows."
+                } catch (e: Exception) {
+                    "CSV export failed: ${e.message ?: e::class.java.simpleName}"
                 }
-            } catch (e: Exception) { }
+                withContext(Dispatchers.Main) { dataStatus = message }
+            }
+        }
+    }
+
+    // Versioned, complete backup through the file the owner explicitly picks.
+    val backupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) {
+            scope.launch(Dispatchers.IO) {
+                val message = try {
+                    val document = backupService.exportDocument(
+                        appVersionName = appVersionName(),
+                        nowEpochMs = System.currentTimeMillis()
+                    )
+                    val text = BackupCodec.encode(document)
+                    context.contentResolver.openOutputStream(uri)?.use { os ->
+                        os.write(text.toByteArray(Charsets.UTF_8))
+                    }
+                    "Backup written: ${document.tables.size} tables, ${document.rowCount()} rows (schema v${document.schemaVersion})."
+                } catch (e: Exception) {
+                    "Backup failed: ${e.message ?: e::class.java.simpleName}"
+                }
+                withContext(Dispatchers.Main) { dataStatus = message }
+            }
+        }
+    }
+
+    // Restore from a backup the owner explicitly picks. Refused files leave the
+    // database untouched; a failed write is rolled back.
+    val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            scope.launch(Dispatchers.IO) {
+                val message = try {
+                    val text = context.contentResolver.openInputStream(uri)?.use { stream ->
+                        stream.readBytes().toString(Charsets.UTF_8)
+                    } ?: ""
+                    when (val decoded = BackupCodec.decode(text)) {
+                        is BackupCodec.DecodeResult.Failure -> decoded.message
+                        is BackupCodec.DecodeResult.Success -> when (val outcome = backupService.restore(decoded.document)) {
+                            is RestoreOutcome.Restored ->
+                                "Restore complete: ${outcome.rowsWritten} rows across ${outcome.tables.size} tables" +
+                                    if (outcome.untouched.isEmpty()) "." else " (left alone: ${outcome.untouched.joinToString()})."
+                            is RestoreOutcome.Refused -> "Restore refused: " + outcome.reasons.joinToString(" ")
+                            is RestoreOutcome.Failed -> outcome.message
+                        }
+                    }
+                } catch (e: Exception) {
+                    "Restore failed: ${e.message ?: e::class.java.simpleName}"
+                }
+                withContext(Dispatchers.Main) { dataStatus = message }
+            }
         }
     }
     val notifLauncher = rememberLauncherForActivityResult(
@@ -177,7 +263,15 @@ fun DayLedgerApp() {
                 onOpen = { screen = it },
                 items = listOf("categories" to "Categories", "notifications" to "Notifications", "learning" to "Learning", "report" to "Report", "settings" to "Settings", "tomorrow" to "Tomorrow")
             )
-            "settings" -> SettingsScreen(onExportCsv = { exportLauncher.launch("dayledger.csv") }, onBackup = { })
+            "settings" -> SettingsScreen(
+                onExportCsv = { exportLauncher.launch("dayledger.csv") },
+                onBackup = {
+                    val stamp = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+                    backupLauncher.launch("dayledger-backup-$stamp.json")
+                },
+                onRestore = { restoreLauncher.launch(arrayOf("application/json", "application/octet-stream", "text/plain")) },
+                status = dataStatus
+            )
         }
         }
     }

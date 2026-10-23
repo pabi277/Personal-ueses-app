@@ -17,4 +17,8 @@ interface AppUsageDao {
 
     @Query("SELECT COALESCE(SUM(foregroundMinutes),0) FROM app_usage WHERE dateKey = :dateKey")
     suspend fun totalForDate(dateKey: String): Int
+
+    /** Every stored usage row, for the CSV export (newest day first). */
+    @Query("SELECT * FROM app_usage ORDER BY dateKey DESC, foregroundMinutes DESC")
+    suspend fun allRows(): List<AppUsageEntity>
 }

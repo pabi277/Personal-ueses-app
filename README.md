@@ -2,6 +2,10 @@
 
 # Day Ledger
 
+Bootstrapped from AppFlow @ c8856022ca57cdf23ae78b9491481543db89438d on 2026-10-15
+(provenance only — this repository is self-contained and its own text is
+authoritative).
+
 **Current checked-in app label:** Day Ledger
 
 **Application/package and database identity:** `io.github.pabi277.dayledger`
@@ -24,24 +28,24 @@ in the current build**. The visible label change is scheduled for Phase 8; until
 then the installed app remains labelled Day Ledger. Do not change the package or
 database identity.
 
-Known current gaps, verified from the source:
+Phase 7 (data safety and migration foundation) is in progress. Verified from the
+source on the current tree:
 
-- The database is Room version 5 with `exportSchema = false` and
-  `fallbackToDestructiveMigration()`; explicit non-destructive upgrade paths have
-  not yet been added.
-- The Settings backup action is not wired to an implementation, and the current
-  CSV output includes a placeholder row. Do not treat either action as a verified
-  backup or restore.
-- The manifest does not yet implement or verify the approved exclusion of
-  app-private data from Android cloud backup/device transfer.
-- Progress-APK signing continuity and update-over-install have not been verified.
-  No stable signing identity is claimed.
+- The database is Room version 5 with `exportSchema = true` and explicit,
+  non-destructive `1 → 2 → 3 → 4 → 5` migrations; the destructive fallback is
+  removed, so an unknown schema fails loudly instead of deleting history.
+- `Settings → Back up everything` writes one versioned JSON file (every table and
+  setting) through the Storage Access Framework, and
+  `Restore from backup` refuses a file from a newer schema or another app instead
+  of half-applying it. CSV export now writes the real stored usage rows.
+- `android:allowBackup="false"`, legacy `fullBackupContent` rules and API 31+
+  `dataExtractionRules` exclude every app-private domain from Android cloud backup
+  and device transfer; CI verifies the merged manifest.
+- Still open in Phase 7: signing continuity/update-over-install proof on the
+  owner's device (tracked in `docs/phases/07-data-safety-migration.md`).
 - The original P0 usage check on the owner's device remains required before Phase 8.
 
-Phase 7 is planned to close the migration, explicit SAF backup/restore, Android OS
-backup-exclusion, signing and install-safety gaps. It is a documentation/plan item
-until separately authorized; it does not add checklist features or rename the
-current app.
+Phase 7 does not add checklist features or rename the current app.
 
 ## Build and test
 
@@ -63,11 +67,16 @@ notification, alarm, boot, package-visibility and accessibility-related
 capabilities. Usage access and blocking capabilities are sensitive and require
 clear user-facing explanations. The app is intended to keep data local.
 
-**Android OS backup exclusion is approved but not implemented/verified yet.** Do
-not assume app-private data is excluded from Android backup or device transfer.
-The target policy is to exclude it; the only backup should be a file the user
-explicitly exports through the app's Storage Access Framework (SAF) flow once the
-Phase 7 implementation is complete and verified.
+**Android OS backup exclusion is implemented.** The manifest sets
+`android:allowBackup="false"` with legacy `fullBackupContent` rules and API 31+
+`dataExtractionRules` that exclude every app-private domain from both cloud backup
+and device-to-device transfer, and CI checks the merged manifest on every run. The
+only backup is the versioned file the user explicitly exports through the app's
+Storage Access Framework flow.
+
+The exact permission set, why each entry exists and what is never requested are
+specified in [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md) §7
+("Permissions and privacy").
 
 ## Future product plan
 

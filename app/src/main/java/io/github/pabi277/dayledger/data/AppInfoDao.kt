@@ -21,6 +21,13 @@ interface AppInfoDao {
     @Query("UPDATE app_info SET category = :category WHERE packageName = :packageName")
     suspend fun updateCategory(packageName: String, category: String)
 
-    @Query("INSERT OR IGNORE INTO app_info (packageName, label, category) VALUES (:packageName, :label, 'Unclassified')")
+    // `alwaysAllowed` is INTEGER NOT NULL with no SQL default, so omitting it made
+    // every row violate the constraint and INSERT OR IGNORE dropped it silently —
+    // app_info stayed empty while app_usage filled up (found in the owner's
+    // 2026-10-23 backup: 0 app_info rows against 301 app_usage rows).
+    @Query(
+        "INSERT OR IGNORE INTO app_info (packageName, label, category, alwaysAllowed, limitMin) " +
+            "VALUES (:packageName, :label, 'Unclassified', 0, NULL)"
+    )
     suspend fun insertIfMissing(packageName: String, label: String)
 }
