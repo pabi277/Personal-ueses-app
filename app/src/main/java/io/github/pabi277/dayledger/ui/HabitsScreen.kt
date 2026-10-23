@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.pabi277.dayledger.HabitsUiState
 import io.github.pabi277.dayledger.HabitsViewModel
+import io.github.pabi277.dayledger.data.checklist.ChecklistGeneration
 import io.github.pabi277.dayledger.data.checklist.HabitRuleEntity
 import io.github.pabi277.dayledger.ui.components.AppCard
 import io.github.pabi277.dayledger.ui.components.EmptyState
@@ -70,19 +71,25 @@ fun HabitsScreen(state: HabitsUiState, viewModel: HabitsViewModel) {
                     }
                 }
                 if (cadence != "daily") {
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        WEEKDAY_LABELS.forEachIndexed { index, label ->
-                            val day = index + 1
-                            OutlinedButton(onClick = {
-                                selectedDays = if (cadence == "weekly") {
-                                    setOf(day)
-                                } else if (day in selectedDays) {
-                                    selectedDays - day
-                                } else {
-                                    selectedDays + day
+                    // Chunked into rows of four on purpose: seven chips in one Row overflow
+                    // a 360dp screen, which clipped Saturday and left Sunday unreachable
+                    // (owner device screenshot, 2026-10-23). UI Design v2 §2 requires
+                    // content to reflow rather than clip.
+                    (1..7).toList().chunked(4).forEach { row ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            row.forEach { day ->
+                                OutlinedButton(onClick = {
+                                    selectedDays = if (cadence == "weekly") {
+                                        setOf(day)
+                                    } else if (day in selectedDays) {
+                                        selectedDays - day
+                                    } else {
+                                        selectedDays + day
+                                    }
+                                }) {
+                                    val label = WEEKDAY_LABELS[day - 1]
+                                    Text(if (day in selectedDays) "● $label" else label)
                                 }
-                            }) {
-                                Text(if (day in selectedDays) "● $label" else label)
                             }
                         }
                     }
@@ -153,8 +160,14 @@ private fun HabitCard(habit: HabitRuleEntity, viewModel: HabitsViewModel) {
     AppCard {
         Text(habit.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         val schedule = when (habit.cadence) {
-            "weekdays" -> "Chosen days: ${habit.weekdays.ifBlank { "none yet" }}"
-            "weekly" -> "Weekly on: ${habit.weekdays.ifBlank { "no day yet" }}"
+            "weekdays" -> "Chosen days: " + (
+                ChecklistGeneration.weekdayNames(ChecklistGeneration.parseWeekdays(habit.weekdays))
+                    .ifBlank { "none yet" }
+                )
+            "weekly" -> "Weekly on: " + (
+                ChecklistGeneration.weekdayNames(ChecklistGeneration.parseWeekdays(habit.weekdays))
+                    .ifBlank { "no day yet" }
+                )"
             else -> "Daily"
         }
         Text(schedule, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

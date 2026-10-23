@@ -128,6 +128,15 @@ class ChecklistGenerationTest {
         assertEquals("1,3,5", ChecklistGeneration.formatWeekdays(setOf(5, 1, 3)))
     }
 
+    @Test
+    fun `weekdays are shown as readable names, never as raw numbers`() {
+        // The first Phase 8 build printed "Chosen days: 4" on the owner's device.
+        assertEquals("Mon, Wed, Fri", ChecklistGeneration.weekdayNames(setOf(1, 3, 5)))
+        assertEquals("Thu", ChecklistGeneration.weekdayNames(setOf(4)))
+        assertEquals("Sun", ChecklistGeneration.weekdayNames(setOf(7)))
+        assertEquals("", ChecklistGeneration.weekdayNames(emptySet()))
+    }
+
     // -------------------------------------------------- idempotency, in SQL
 
     @Test

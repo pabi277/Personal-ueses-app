@@ -75,6 +75,16 @@ object ChecklistGeneration {
 
     fun formatWeekdays(days: Set<Int>): String = days.sorted().joinToString(",")
 
+    private val WEEKDAY_NAMES = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+
+    /**
+     * Readable schedule text. The first build printed the raw CSV ("Chosen days: 4"),
+     * which is a number nobody can read back as "Thursday" — found on the owner's device
+     * during the Phase 8 smoke check.
+     */
+    fun weekdayNames(days: Set<Int>): String =
+        days.sorted().mapNotNull { WEEKDAY_NAMES.getOrNull(it - 1) }.joinToString(", ")
+
     /**
      * Everything that should exist on [date]: scheduled habits plus one-off tasks due that
      * date. A paused or archived habit generates nothing; a task generates exactly one
