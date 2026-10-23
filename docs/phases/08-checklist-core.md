@@ -231,6 +231,27 @@ Every clause of the roadmap's Done-means sentence for this phase is met:
 **Merged to `main` on 2026-10-23** with the owner's explicit command, together with the P0
 measurement fix and F1 that had been waiting on this branch.
 
+### Post-merge evidence on `main` (project rule: a branch run is not a main run)
+
+PR **#25** merged `--merge` at 2026-10-23T06:52:36Z; `main` moved `2ee8048` → **`66582f1`**.
+The branch run before the merge (`39913785708`) and the PR run (`39913960646`) were both
+green, but neither proves the post-merge tree.
+
+Run **`39914193884`** on `main` @ `66582f1`, **both jobs success** — the same shape as the
+Phase 7 merge:
+
+| Job / artifact | Result |
+|---|---|
+| `Unit tests, debug build, progress APK` | ✅ (88 tests) |
+| `Signed release AAB and APK` | ✅ — the release path still works at schema v6 |
+| `signed-android-release` | 24,718,303 B (was 24,550,572 B at v5) |
+| `app-progress-apk` | 18,519,604 B |
+| `room-schema` | 2,378 B |
+| Signer | `533D76ED5C2E264779EE005C…` — unchanged for the tenth run |
+
+Every run since Phase 7's merge now carries a v6 build signed by the one owner key, which
+is what makes an update-over-install onto the owner's phone safe.
+
 **Carried forward, not silently dropped:** the Plan screen does not render checklist items
 (§6); habit *editing* is edit-lite (create/pause/archive, no reschedule or in-place edit);
 reminder profiles, Morning Brief, Evening Close carryover and Focus remain unstarted and
