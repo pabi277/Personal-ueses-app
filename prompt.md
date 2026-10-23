@@ -229,7 +229,7 @@
    downloaded by the owner from the `room-schema` artifact of run `39932190461` and verified
    against `MigrationTest`'s expectation table before committing (19/19 tables, zero
    differences, both indices, `autoGenerate` on the seven integer ids). Artifact downloads
-   still fail in the agent's sandbox, so the next schema bump needs one more owner download.
+   still fail in the agent's sandbox, so the next schema bump needs one more owner download. Run `39933633831` (commit `77e6c2c`) is green with the file committed and 113 tests passing, so the export step tolerates a pre-populated `app/schemas`.
 7. **The 21 open issues are all auto-filed `CI build failure` reports and all describe
    failures that no longer reproduce** — see `docs/ci-issue-triage.md` for the per-issue
    mapping to the run that filed it and the green evidence that retired it. **The owner
