@@ -134,6 +134,10 @@
   describe them as verified on the owner's phone. Database version remains 5; any
   later schema bump must add the next explicit migration and rerun the full
   v1–v5 matrix before shipping.
+- Signing status (2026-10-23): **stable and owner-controlled.** Two runs of commit
+  `d773a12` produced the same `signer-533D76ED5C2E264779EE005C` artifact and the same
+  APK size, with `Prepare owner signing key` succeeding, so the progress APK and the
+  release path share one certificate. History below is kept as the evidence trail.
 - Signing status (2026-10-22, Phase 7 gate): the gate failed on evidence — the
   progress APK was signed by an AGP-generated debug key recreated on every runner
   (no keystore restore, no `signingConfigs`), and `main` run `39771615912` failed
@@ -163,20 +167,18 @@
 1. Read `docs/REQUIREMENTS.md`, `docs/ROADMAP.md`, `docs/DECISIONS.md`,
    `docs/UI_DESIGN.md` and the latest `docs/phases/` record — trust the repo, not
    memory. Ask nothing that is already recorded.
-2. Phase 7 is **in progress**: parts **7.1–7.4 are implemented and CI-verified**
-   (run `39777555069`, 26 tests green — schema export, non-destructive
-   v1→v5 migrations, versioned SAF backup/restore, OS-backup exclusion), and
-   **nothing has been installed on the owner's phone**. Remaining, owner-only:
-   (a) create the keystore outside the repo and add the four secret **names**
-   (`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`,
-   `ANDROID_KEY_PASSWORD`; values his alone, never asked for in chat);
-   (b) complete the database rescue (`docs/phases/07-data-safety-migration.md`
-   §6b/§6c — PC+USB or Termux wireless ADB, since the owner has one phone and no
-   second device); (c) one uninstall + install of an owner-key APK; then part 7.5
-   (update-over-install proof) and the device smoke check in §10 of that record.
-   The owner chose **option A**: build everything CI can prove, install nothing
-   until a rescue path exists. Keep the full device matrix at Phase 15 and
-   preserve P0 before Phase 8.
+2. Phase 7 is **in progress, nearly done**: parts **7.1–7.4 are implemented and
+   CI-verified** (run `39777555069`, 26 tests), the **signing gate is closed by
+   evidence** — the owner's keystore exists, the four secret names are set, and two
+   runs of one commit print the same signer `533D76ED5C2E264779EE005C…` — and the
+   owner has installed, launched, exported a complete 14-table/538-row backup and
+   seen a bad file refused on device. Only two device checks remain
+   (`docs/phases/07-data-safety-migration.md` §9a.4): a restore round trip that
+   shows "Restore complete: 538 rows across 14 tables" and 2026-10-21 = 725 min /
+   2026-10-22 = 237 min, and installing a later owner-keyed APK **over** the current
+   build (part 7.5). Do not mark Phase 7 ✅ before both. Never ask for secret values
+   or keystore contents; the owner's backup JSON must never be committed. Keep the
+   full device matrix at Phase 15 and preserve P0 before Phase 8.
 3. End each implementation phase with CI green and its `app-progress-apk`; the
    owner installs it and records a short smoke check plus the phase-specific
    evidence in the phase record. Update roadmap/prompt and stop at the merge gate.

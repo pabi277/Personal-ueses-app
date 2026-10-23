@@ -62,24 +62,22 @@ Bootstrapped from AppFlow @ c8856022ca57cdf23ae78b9491481543db89438d on 2026-10-
 
 ### Phase 7 — Data safety and migration foundation (no checklist features)
 
-> 🚧 **Status: IN PROGRESS — parts 7.1–7.4 implemented and CI-verified; 7.5 and
-> the Done gate wait on the owner's device (2026-10-22).** The signing gate was run
-> first and failed: progress APKs were signed by a per-runner throwaway debug key and
-> the release job was missing the name `ANDROID_KEYSTORE_BASE64`. The owner answered
-> the gate (data **valuable**, one owner-controlled identity **approved**), so the
-> signing plumbing is wired — one `owner` signing config used by **both** debug and
-> release, a runner keystore restore, and the signer's SHA-256 certificate fingerprint
-> published as a per-run artifact name (measured: two runs of the same tree produced
-> **different** fingerprints, `DC13157E…` vs `B988DBD3…`, proving the throwaway-key
-> defect) — and Phase 7's data-safety work was then built entirely in CI:
-> Room v5 schema export, explicit non-destructive `1→2→3→4→5` migrations (no version
-> bump, destructive fallback removed), versioned SAF backup/restore for every table
-> and setting, and `allowBackup="false"` plus legacy/API-31 extraction rules verified
-> in the merged manifest. Green run **`39777555069`**, 26 unit tests, artifacts
-> `app-progress-apk` and `room-schema`. **Nothing was installed on the owner's
-> phone.** Outstanding: the owner's signing secrets, the database rescue, the
-> one-time uninstall, and then the device smoke check and update-over-install proof
-> (part 7.5). Evidence and procedures:
+> 🚧 **Status: IN PROGRESS — parts 7.1–7.4 CI-verified; signing gate CLOSED by
+> evidence; two device checks outstanding (2026-10-23).** History: the gate was run
+> first and failed (progress APKs were signed by a per-runner throwaway key — measured,
+> `DC13157E…` vs `B988DBD3…` on the same tree; the release job was missing the name
+> `ANDROID_KEYSTORE_BASE64`). The owner then answered the gate (data **valuable**, one
+> owner-controlled identity **approved**), created the keystore outside the repo and set
+> the four secret names. Two runs of one commit now print the **same** signer
+> (`signer-533D76ED5C2E264779EE005C`), so the identity is stable. Phase 7's data-safety
+> work is implemented and CI-verified: Room v5 schema export, explicit non-destructive
+> `1→2→3→4→5` migrations (no version bump, destructive fallback removed), versioned SAF
+> backup/restore for every table and setting, and `allowBackup="false"` plus
+> legacy/API-31 extraction rules verified in the merged manifest. On device the owner
+> has installed and launched the build, exported a complete **14-table, 538-row**
+> backup, and seen a non-backup file refused. **Outstanding to mark Done:** the restore
+> round trip with the expected row count, and installing a later owner-keyed APK over
+> the current one (part 7.5). Evidence:
 > [`docs/phases/07-data-safety-migration.md`](phases/07-data-safety-migration.md).
 
 #### Historical Room inventory (verified from Git history, 2026-10-22)

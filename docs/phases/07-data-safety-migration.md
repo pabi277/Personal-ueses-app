@@ -1,7 +1,7 @@
 # Phase 07 — Data safety and migration foundation
 
-- Status: 🚧 **IN PROGRESS — parts 7.1–7.4 implemented and CI-verified; 7.5 and
-  the Done gate wait on the owner's device** · Date: 2026-10-22 ·
+- Status: 🚧 **IN PROGRESS — parts 7.1–7.4 CI-verified, signing gate CLOSED by
+  evidence (2026-10-23), owner device evidence partly recorded** · Date: 2026-10-23 ·
   Branch: `arena/0276c412-personal-ueses-app`
 - Base: `main` @ `8070713` (merge commit of PR #11)
 - Round 1 (evidence only) wrote no code. Round 2 wires the owner-approved signing
@@ -527,26 +527,95 @@ can be committed as-is under
 schema-matrix test already pins the same column facts, so nothing is unverified
 meanwhile — only the canonical file is absent.
 
+## 9a. Round 4 — signing gate CLOSED, first owner device evidence (2026-10-23)
+
+### 9a.1 Signing continuity is now proven, not assumed
+
+The owner regenerated the keystore, verified it locally before uploading, and set the
+four secret names from Termux. Two CI runs on the **same commit** then produced the
+same certificate:
+
+| Run | Commit | `Prepare owner signing key` | `app-progress-apk` | Signer artifact | Certificate SHA-256 (first 24 hex) |
+|---|---|---|---|---|---|
+| `39896987585` | `d773a12` | ✅ owner keystore | 18,378,004 B | `signer-533D76ED5C2E264779EE005C` | `533D76ED5C2E264779EE005C…` |
+| `39897192094` | `d773a12` | ✅ owner keystore | 18,378,004 B | `signer-533D76ED5C2E264779EE005C` | `533D76ED5C2E264779EE005C…` |
+
+Compare with §5a: two runs of one tree previously produced *different* certificates
+(`DC13157E…` vs `B988DBD3…`). Now the same fingerprint twice, from the owner's key —
+**the signing gate is satisfied on CI evidence.** What that does *not* yet prove is a
+device-side update-over-install (§9a.3).
+
+The path to here, kept because it is the evidence trail: `packageDebug` failed on a key
+that could not be read (`39811357193`), the store password was proven wrong without
+exposing it (`39811839022`), the decoded keystore was proven intact — `PKCS12`, 4,389
+bytes, 5,852 base64 characters — so the paste was never the problem (`39812191114`),
+and whitespace-trimming checks were added (`3270a67`) before the owner regenerated the
+key (`d773a12`).
+
+### 9a.2 Backup export verified against a real device file
+
+The owner exported `dayledger-backup-2026-10-23.json` from the installed build and
+attached it. It is a genuine Phase 7 document, not a placeholder:
+
+- `formatVersion` 1 · `schemaVersion` 5 · `app` `io.github.pabi277.dayledger` ·
+  `appVersion` 0.1.0 · written 2026-10-23T04:02Z
+- **14 tables, 538 rows**, file sha256 `f2dcf181ca0ff357f5531dd487f7913db252e8fe86564078b420ce27ac748205`
+- rows per table: `app_usage` 301 · `hourly_usage` 216 · `categories` 6 ·
+  `template_items` 7 · `templates` 4 · `notification_rules` 2 · `settings` 1 ·
+  `notification_log` 1 · `app_info`/`blocks`/`day_plans`/`earnings`/`learning`/`limit_events` 0
+- content sanity: 9 distinct days (2026-10-15 → 2026-10-23), 4,940 foreground minutes in
+  total; 2026-10-21 = 725 min, 2026-10-22 = 237 min, 2026-10-23 = 222 min; the six
+  categories are `Earning, Study, College, Social/Waste, Life, Unclassified`; templates
+  `College day, Study day, Earning day, Off day`; setting `daily_cap = 6`
+
+**The file is deliberately not committed**: it is the owner's real data, and `rule.md`
+§5 forbids that. Only aggregates are recorded here.
+
+### 9a.3 What the owner reported, mapped to the record
+
+| Question | Owner's answer | What it establishes |
+|---|---|---|
+| Install | uninstalled the old build, then installed the new one | the build installs; but this is a **fresh install**, not an update |
+| Launch, no crash | yes | new Room setup (v5, migrations registered, no destructive fallback) starts on a real device |
+| Backup export | yes, file attached | part 7.2 **export** works on device |
+| Restore | "I restored but can't tell if it worked" | **not yet established** — needs the decisive check in §9a.4 |
+| Bad-file refusal | yes | the refusal path works on device |
+| Errors | none | no crash or error text observed |
+
+### 9a.4 The two checks that close Phase 7
+
+**A. Restore round trip (part 7.2, "clear app data → restore → lose nothing").**
+Deterministic, and safe because the file and the raw `.db` rescue copy both exist:
+
+1. Settings → Apps → Day Ledger → Storage → **Clear data**; open the app (numbers empty).
+2. Settings → **Restore from backup** → pick `dayledger-backup-2026-10-23.json`.
+3. Read the status line under the buttons — it must say exactly
+   **“Restore complete: 538 rows across 14 tables.”**
+4. Open Today: 2026-10-21 must read **725 min** and 2026-10-22 **237 min** (today,
+   2026-10-23, may creep upward because the phone keeps counting — that is normal
+   device-reported behaviour, not a restore fault).
+
+**B. Update-over-install (part 7.5).** The next APK built from this branch is signed by
+the same key as the installed one, so installing it **over** the current build closes
+7.5. Any uninstall prompt or `INSTALL_FAILED_UPDATE_INCOMPATIBLE` means the identity is
+not yet what CI reports — report the exact text.
+
 ## 10. How this phase becomes Done
 
 Two evidence lines, kept separate so CI evidence and owner evidence can never be
 confused.
 
-**CI/test evidence — ✅ collected (run `39777555069`):** every supported v1–v4 → v5
-upgrade non-destructive, schema matrix match, backup/restore round trip, refusal
-paths, merged-manifest OS-backup exclusion, `app-progress-apk` uploaded.
+**CI/test evidence — ✅ complete:** run `39777555069` (26 tests; migrations v1–v4 → v5
+non-destructive, schema matrix, backup/restore round trip, refusal paths,
+merged-manifest OS-backup exclusion, `app-progress-apk` + `room-schema`), plus
+`39896987585` and `39897192094` proving one stable owner-keyed certificate
+(`533D76ED5C2E264779EE005C…`).
 
-**Owner-device evidence — ⬜ still outstanding.** All of it needs one install, which
-needs the one-time uninstall, which needs the database rescue first (§6b/§6c):
+**Owner-device evidence — partly recorded (2026-10-23):**
+✅ installs and launches · ✅ backup export produces a complete 14-table, 538-row file ·
+✅ a non-backup file is refused · ✅ no errors observed.
+⬜ restore round trip with the expected row count (§9a.4 A).
+⬜ update-over-install of a later owner-keyed APK (§9a.4 B).
 
-1. A `dayledger-backup-*.json` file exported from Settings → *Back up everything*.
-2. That same file restored after a clear-data, with row counts unchanged.
-3. The app launching normally on the new Room configuration (no crash dialog).
-4. `app-progress-apk` installing **over** the installed build without uninstalling.
-5. P0 usage numbers still correct, with any exact error text if they are not.
-6. The certificate SHA-256 fingerprint printed by two separate runs being identical.
-
-Phase 7 is **not Done** while any of those is missing, and it is not Done while the
-signing secrets are absent. When the owner reports items 1–6, this record gains a
-"Round 4 — owner device evidence" section quoting his words, and only then does the
-roadmap row move to ✅.
+Phase 7 becomes ✅ when those two boxes are ticked. Until then it stays 🚧, and no
+summary may describe the backup/restore or the update path as verified on the device.
