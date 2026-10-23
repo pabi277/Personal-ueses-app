@@ -215,6 +215,32 @@ class ReminderRepository(
 
     suspend fun eventsFor(occurrenceId: String) = eventDao.forOccurrence(occurrenceId)
 
+    /**
+     * Remember whether the last scheduling attempt could use an exact alarm. Empty string
+     * means "fine"; anything else is shown to the owner verbatim.
+     */
+    suspend fun recordDegraded(occurrenceId: String, degraded: String) {
+        val state = stateDao.get(occurrenceId) ?: return
+        if (state.degraded == degraded) return
+        stateDao.setDegraded(occurrenceId, degraded, System.currentTimeMillis())
+        if (degraded.isNotEmpty()) {
+            eventDao.append(
+                ReminderEventEntity(
+                    occurrenceId = occurrenceId,
+                    dateKey = state.occurrenceId.substringAfterLast(':'),
+                    kind = ReminderEventKind.DEGRADED,
+                    detail = degraded
+                )
+            )
+        }
+    }
+
+    /** Every open occurrence today whose reminder state currently says "degraded". */
+    suspend fun degradedCount(): Int {
+        val openIds = openToday().map { it.id }.toSet()
+        return stateDao.all().count { it.degraded.isNotEmpty() && it.occurrenceId in openIds }
+    }
+
     suspend fun soonestFireAt(): Long? = stateDao.soonest()
 
     // ------------------------------------------------------------ queries

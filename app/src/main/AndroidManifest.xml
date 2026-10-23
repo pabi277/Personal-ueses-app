@@ -32,13 +32,23 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!--
+          Phase 10.4: every event that invalidates a scheduled reminder rebuilds the
+          schedule from persisted state. A reboot drops every AlarmManager entry, and a
+          clock or time-zone change moves every wall-clock time the engine computed.
+        -->
         <receiver
             android:name=".notifications.BootReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+        <receiver android:name=".notifications.ReminderAlarmReceiver" android:exported="false" />
+        <receiver android:name=".notifications.ReminderActionReceiver" android:exported="false" />
             <receiver android:name=".notifications.ScheduledNotificationReceiver" android:exported="false" />
         <receiver android:name=".notifications.NotificationActionReceiver" android:exported="false" />
             <receiver android:name=".widget.DayLedgerWidgetReceiver" android:exported="true">

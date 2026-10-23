@@ -10,6 +10,7 @@ import io.github.pabi277.dayledger.data.checklist.ChecklistValues
 import io.github.pabi277.dayledger.data.checklist.TodayBuckets
 import io.github.pabi277.dayledger.data.checklist.TodayItem
 import io.github.pabi277.dayledger.data.checklist.TodayRow
+import io.github.pabi277.dayledger.notifications.ReminderScheduler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -96,6 +97,9 @@ class ChecklistViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 repo.act(id, action)
+                // Phase 10: a tap on the screen and a tap on the notification must leave the
+                // same state behind, so the schedule is recomputed here too.
+                runCatching { ReminderScheduler(getApplication()).syncOne(id) }
                 _state.value = _state.value.copy(
                     lastActionId = id,
                     // Done and Minimum offer the optional-detail sheet; Skip and Later do not.
@@ -114,6 +118,7 @@ class ChecklistViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 repo.undo(id)
+                runCatching { ReminderScheduler(getApplication()).syncOne(id) }
             } catch (e: Exception) {
                 _state.value = _state.value.copy(error = e.message)
             }

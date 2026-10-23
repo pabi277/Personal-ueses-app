@@ -65,6 +65,7 @@ import io.github.pabi277.dayledger.ui.PlanningScreen
 import io.github.pabi277.dayledger.ui.HabitsScreen
 import io.github.pabi277.dayledger.ui.InboxScreen
 import io.github.pabi277.dayledger.ui.DayCloseScreen
+import io.github.pabi277.dayledger.ui.RemindersScreen
 import io.github.pabi277.dayledger.ui.TodayScreen
 
 class MainActivity : ComponentActivity() {
@@ -94,6 +95,7 @@ fun DayLedgerApp() {
     val habitsVm: HabitsViewModel = viewModel()
     val inboxVm: InboxViewModel = viewModel()
     val dayCloseVm: DayCloseViewModel = viewModel()
+    val remindersVm: RemindersViewModel = viewModel()
     val state by todayVm.state.collectAsState()
     val catState by categoryVm.state.collectAsState()
     val notifState by notificationVm.state.collectAsState()
@@ -106,12 +108,18 @@ fun DayLedgerApp() {
     val habitsState by habitsVm.state.collectAsState()
     val inboxState by inboxVm.state.collectAsState()
     val dayCloseState by dayCloseVm.state.collectAsState()
+    val remindersState by remindersVm.state.collectAsState()
 
     var screen by remember { mutableStateOf(if (state.hasUsagePermission) "today" else "onboarding") }
 
     // Phase 8: the checklist front door owns the first screen. Generation runs on every
     // start; the ids are deterministic, so a restart or reboot adds no duplicates.
     LaunchedEffect(Unit) { checklistVm.load() }
+
+    // Phase 10.4: rebuild every reminder alarm on launch. The schedule is derived from
+    // persisted state, so this is also the recovery path after an app update or a
+    // permission re-grant - no separate repair job to forget about.
+    LaunchedEffect(Unit) { remindersVm.syncSchedules() }
 
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
@@ -282,6 +290,9 @@ fun DayLedgerApp() {
                 LaunchedEffect(Unit) { categoryVm.load() }
             }
             "notifications" -> NotificationsScreen(state = notifState, viewModel = notificationVm)
+            "reminders" -> {
+                RemindersScreen(state = remindersState, viewModel = remindersVm)
+            }
             "plan" -> PlanningScreen(state = planningState, viewModel = planningVm, dateKey = java.time.LocalDate.now().toString())
             "tomorrow" -> PlanningScreen(state = planningState, viewModel = planningVm, dateKey = java.time.LocalDate.now().plusDays(1).toString())
             "limits" -> {
@@ -310,6 +321,7 @@ fun DayLedgerApp() {
                     "learning" to "Learn",
                     "categories" to "Categories",
                     "notifications" to "Notifications",
+                    "reminders" to "Reminders",
                     "tomorrow" to "Tomorrow",
                     "report" to "Weekly report",
                     "settings" to "Settings"
