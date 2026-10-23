@@ -196,7 +196,14 @@
    measurement rebuild; both numbers and the diagnosis are in
    `docs/phases/07-data-safety-migration.md` §9d–§9e. Never commit the owner's backup
    JSON or secret values, and keep the full device matrix at Phase 15.
-3. End each implementation phase with CI green and its `app-progress-apk`; the
+3. **Phase 8 (Checklist core) is in progress.** Schema v6 adds `habit_rules`,
+   `checklist_tasks`, `checklist_occurrences` (primary key `kind:source:date`, so
+   generation is idempotent) and `completion_logs` (append-only, undo writes a row).
+   Today is the Command Center Checklist and the visible label is **Daily Logger**;
+   `io.github.pabi277.dayledger` and `dayledger.db` are unchanged. Blocked on one
+   workflow guard that hardcodes `5.json` — a workflow edit needs an owner gate answer.
+   Record: `docs/phases/08-checklist-core.md`.
+4. End each implementation phase with CI green and its `app-progress-apk`; the
    owner installs it and records a short smoke check plus the phase-specific
    evidence in the phase record. Update roadmap/prompt and stop at the merge gate.
    No PR or merge without an explicit command.

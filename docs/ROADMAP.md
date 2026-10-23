@@ -193,6 +193,15 @@ Phase 15.
 
 ### Phase 8 — Checklist core
 
+> 🚧 **Status: in progress (2026-10-23).** Parts 8.1–8.3 are implemented and 8.4 is
+> edit-lite; schema v6, idempotent generation, the Today checklist front door and the
+> **Daily Logger** label are in. Compile and all **86** unit tests pass (run `39908508385`),
+> but the run is red on one step that is not code: `Record Room schema export` hardcodes
+> `find app/schemas -name "5.json"`, and the legitimate v6 bump means Room now exports
+> `6.json`. That is a **workflow** change, which needs an owner gate answer, so it is not
+> applied. No owner device evidence yet. Full record:
+> [`docs/phases/08-checklist-core.md`](phases/08-checklist-core.md).
+
 **Parts**
 
 - **8.1 — Model and generation:** add distinct habit rules, one-off tasks, dated
