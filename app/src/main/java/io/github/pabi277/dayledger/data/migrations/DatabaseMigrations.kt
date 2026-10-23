@@ -17,11 +17,11 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  */
 object DatabaseMigrations {
 
-    /** Current database version. Phase 9 adds the capture inbox (v6 → v7). */
-    const val CURRENT_VERSION = 7
+    /** Current database version. Phase 10 adds per-occurrence reminder state (v7 → v8). */
+    const val CURRENT_VERSION = 8
 
     /** Every version this build can open. A version outside this set fails. */
-    val SUPPORTED_VERSIONS: List<Int> = listOf(1, 2, 3, 4, 5, 6, 7)
+    val SUPPORTED_VERSIONS: List<Int> = listOf(1, 2, 3, 4, 5, 6, 7, 8)
 
     /**
      * v1 → v2 (Phase 2): notifications. Adds `settings`, `notification_rules`,
@@ -120,14 +120,40 @@ object DatabaseMigrations {
             "PRIMARY KEY(`id`))"
     )
 
-    /** Ordered steps, used by the tests to replay 1 → 6 statement by statement. */
+    /**
+     * v7 → v8 (Phase 10): persistent reminder state. Adds `reminder_states` and the
+     * append-only `reminder_events`.
+     *
+     * Pure addition again. Reminder state is stored per dated occurrence, which is the
+     * requirement's own wording — a transient alarm alone forgets everything across a
+     * reboot. No existing table is touched, so an owner's checklist history is untouched by
+     * the upgrade and a v7 backup still restores into this schema (the new tables simply
+     * start empty and are rebuilt from the occurrences already present).
+     */
+    val V7_TO_V8: List<String> = listOf(
+        "CREATE TABLE IF NOT EXISTS `reminder_states` (`occurrenceId` TEXT NOT NULL, " +
+            "`profile` TEXT NOT NULL, `nextFireAt` INTEGER, `audibleFires` INTEGER NOT NULL, " +
+            "`totalFires` INTEGER NOT NULL, `lastFireAt` INTEGER, `degraded` TEXT NOT NULL, " +
+            "`updatedAt` INTEGER NOT NULL, PRIMARY KEY(`occurrenceId`))",
+        "CREATE TABLE IF NOT EXISTS `reminder_events` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+            "`occurrenceId` TEXT NOT NULL, `dateKey` TEXT NOT NULL, `kind` TEXT NOT NULL, " +
+            "`profile` TEXT NOT NULL, `audible` INTEGER NOT NULL, `detail` TEXT NOT NULL, " +
+            "`at` INTEGER NOT NULL)",
+        "CREATE INDEX IF NOT EXISTS `index_reminder_events_occurrenceId` " +
+            "ON `reminder_events` (`occurrenceId`)",
+        "CREATE INDEX IF NOT EXISTS `index_reminder_events_dateKey` " +
+            "ON `reminder_events` (`dateKey`)"
+    )
+
+    /** Ordered steps, used by the tests to replay 1 → 8 statement by statement. */
     val STEPS: List<Step> = listOf(
         Step(1, 2, V1_TO_V2),
         Step(2, 3, V2_TO_V3),
         Step(3, 4, V3_TO_V4),
         Step(4, 5, V4_TO_V5),
         Step(5, 6, V5_TO_V6),
-        Step(6, 7, V6_TO_V7)
+        Step(6, 7, V6_TO_V7),
+        Step(7, 8, V7_TO_V8)
     )
 
     data class Step(val from: Int, val to: Int, val statements: List<String>)

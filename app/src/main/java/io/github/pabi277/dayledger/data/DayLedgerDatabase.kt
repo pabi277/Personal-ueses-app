@@ -15,6 +15,10 @@ import io.github.pabi277.dayledger.data.checklist.InboxDao
 import io.github.pabi277.dayledger.data.checklist.InboxItemEntity
 import io.github.pabi277.dayledger.data.checklist.HabitRuleEntity
 import io.github.pabi277.dayledger.data.migrations.DatabaseMigrations
+import io.github.pabi277.dayledger.reminders.ReminderEventDao
+import io.github.pabi277.dayledger.reminders.ReminderEventEntity
+import io.github.pabi277.dayledger.reminders.ReminderStateDao
+import io.github.pabi277.dayledger.reminders.ReminderStateEntity
 
 @Database(
     entities = [
@@ -36,7 +40,9 @@ import io.github.pabi277.dayledger.data.migrations.DatabaseMigrations
         ChecklistTaskEntity::class,
         ChecklistOccurrenceEntity::class,
         CompletionLogEntity::class,
-        InboxItemEntity::class
+        InboxItemEntity::class,
+        ReminderStateEntity::class,
+        ReminderEventEntity::class
     ],
     version = DatabaseMigrations.CURRENT_VERSION,
     exportSchema = true
@@ -47,6 +53,8 @@ abstract class DayLedgerDatabase : RoomDatabase() {
     abstract fun checklistOccurrenceDao(): ChecklistOccurrenceDao
     abstract fun completionLogDao(): CompletionLogDao
     abstract fun inboxDao(): InboxDao
+    abstract fun reminderStateDao(): ReminderStateDao
+    abstract fun reminderEventDao(): ReminderEventDao
     abstract fun usageDao(): AppUsageDao
     abstract fun hourlyDao(): HourlyUsageDao
     abstract fun appInfoDao(): AppInfoDao
@@ -72,7 +80,7 @@ abstract class DayLedgerDatabase : RoomDatabase() {
                     DayLedgerDatabase::class.java,
                     "dayledger.db"
                 )
-                    // Explicit, non-destructive v1 → v2 → … → v6 steps.
+                    // Explicit, non-destructive v1 → v2 → … → v8 steps.
                     // There is deliberately NO fallbackToDestructiveMigration():
                     // an unknown schema must fail loudly instead of silently
                     // deleting the owner's history.
