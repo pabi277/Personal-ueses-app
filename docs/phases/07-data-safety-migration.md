@@ -662,6 +662,76 @@ before Phase 8**. That check is still open, and it is worth doing on the APK fro
 5. Also note whether app names now appear instead of package names — that confirms
    §9b.2 on the device.
 
+## 9c. Round 6 — restore corroborated, and the defect's second half (2026-10-23)
+
+The owner exported a second backup after installing the fix and restoring:
+`dayledger-backup-2026-10-23 (1).json`, 33,567 bytes,
+sha256 `770bc8001c9ff27051d91c1aa50ade0af836d1a2e04fafb0d180dbee4e688bda`, written
+2026-10-23T04:33Z (31 minutes after the first file). Comparing the two files turns
+"restore as reported" into data-backed evidence.
+
+### 9c.1 The restore really did put the history back
+
+"Clear data → restore → lose nothing" is Phase 6's acceptance sentence and Phase 7's
+part 7.2. After clear-data those rows can only exist again if the restore wrote them:
+
+| Table | First export | After restore | Verdict |
+|---|---|---|---|
+| `categories` | 6 rows | 6 rows, **row-for-row identical** | preserved |
+| `templates` | 4 | 4, identical | preserved |
+| `template_items` | 7 | 7, identical | preserved |
+| `notification_rules` | 2 | 2, identical | preserved |
+| `settings` | 1 | 1, identical | preserved |
+| `notification_log` | 1 | 1, identical | preserved |
+| `app_usage` | 301 rows | 304 rows | see below |
+
+Per-day foreground minutes, before → after:
+
+| Date | Before | After | Rows before/after |
+|---|---:|---:|---|
+| 2026-10-15 | 867 | **867** | 50 / 50 |
+| 2026-10-16 | 712 | **712** | 34 / 34 |
+| 2026-10-17 | 424 | **424** | 23 / 23 |
+| 2026-10-18 | 711 | **711** | 26 / 26 |
+| 2026-10-19 | 690 | **690** | 19 / 19 |
+| 2026-10-20 | 352 | **352** | 39 / 39 |
+| 2026-10-21 | 725 | **725** | 36 / 36 |
+| 2026-10-22 | 237 | 266 | 47 / 47 |
+| 2026-10-23 | 222 | 251 | 27 / 30 |
+
+Seven historical days came back byte-identical after the data was cleared. The 22nd and
+23rd moved because the phone kept reporting usage and the ingest re-read the days inside
+its window — same rows, more minutes — which is normal device-reported behaviour, not a
+restore fault. `hourly_usage` agrees: 213 of 216 cells identical, the three differences
+being two live hours today and one late-closing session on the 16th (50 → 51 minutes).
+
+### 9c.2 The `app_info` fix is confirmed on the device
+
+`app_info` went **0 → 72 rows** with real labels (`YouTube`, `Truecaller`, `Google`,
+`Where is My Train`, `Telegram`, `WhatsApp`, `Call`, `Media picker`, …). The regression
+fixed in `6a9f708` works in production, and backups from now on can carry labels.
+
+### 9c.3 Second half of the defect: category assignment silently did nothing
+
+All 72 rows are `category = "Unclassified"`, `alwaysAllowed = 0`, `limitMin = NULL`,
+although six category definitions exist. That is explained by the same root cause, not by
+the restore:
+
+- `assignAppCategory` is `UPDATE app_info SET category = ? WHERE packageName = ?`
+  (`UsageRepository.kt:177`). With **no rows in the table**, the update matched nothing
+  and reported success — so every assignment the owner made in the Categories screen was
+  discarded, silently, since Phase 1.
+- Because the pre-fix backup could not contain `app_info` at all, this is not
+  recoverable from either file; it must be re-entered once. After the fix the row exists,
+  so an assignment now persists and is included in the next backup.
+- `toggleAlwaysAllowed` used `upsertAll` on a row read from state, which had the same
+  "no row to read" problem; it now works because ingest creates the rows.
+
+**Not fixed here, recorded for the next phase:** nothing in the app writes per-app
+`limitMin` at all (the Limits screen only toggles always-allowed), so per-app limits are
+unimplemented rather than unpersisted. That is a Phase 4 scope question, outside this
+data-safety phase, and it belongs in the P0/Phase 8 conversation.
+
 ## 10. How this phase becomes Done
 
 Two evidence lines, kept separate so CI evidence and owner evidence can never be
@@ -672,12 +742,16 @@ trip, refusal paths, merged-manifest OS-backup exclusion, schema export) and
 `39900306233` (30 tests including the `app_info` regression), with four runs agreeing on
 one owner-keyed signer `533D76ED5C2E264779EE005C…`.
 
-**Owner-device evidence — recorded as owner report (2026-10-23):**
-✅ installs and launches · ✅ complete 14-table/538-row backup exported ·
-✅ non-backup file refused · ✅ update-over-install of a later owner-keyed APK ·
-✅ restore performed. ⬜ the exact status strings and day totals that would turn
-"as reported" into a quoted observation, and ⬜ the **P0 number comparison** that the
-roadmap's Done means requires before Phase 8.
+**Owner-device evidence (2026-10-23):**
+✅ installs and launches · ✅ backup export produces a complete file
+(first: 14 tables/538 rows, second: 613 rows) · ✅ a non-backup file is refused ·
+✅ update-over-install of a later owner-keyed APK (owner report) ·
+✅ **restore corroborated by the owner's own files** — seven historical days return
+identical after clear-data, and six configuration tables return row-for-row identical
+(§9c.1) · ✅ the `app_info` fix verified on device, 0 → 72 labels (§9c.2).
+⬜ the **P0 number comparison** (Today's total and top app vs Digital Wellbeing) that the
+roadmap's Done means requires before Phase 8, and ⬜ pasting the on-screen status line
+(`Restore complete: … rows …`) if a quotable string is wanted.
 
 Phase 7 therefore stays 🚧 on one item only — P0 — even though every part (7.1–7.5) is
 implemented, CI-verified and exercised on the device.
