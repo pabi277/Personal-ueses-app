@@ -532,13 +532,14 @@ meanwhile — only the canonical file is absent.
 ### 9a.1 Signing continuity is now proven, not assumed
 
 The owner regenerated the keystore, verified it locally before uploading, and set the
-four secret names from Termux. Two CI runs on the **same commit** then produced the
-same certificate:
+four secret names from Termux. Three CI runs — two on one commit and one on the
+following commit — produced the **same** certificate:
 
 | Run | Commit | `Prepare owner signing key` | `app-progress-apk` | Signer artifact | Certificate SHA-256 (first 24 hex) |
 |---|---|---|---|---|---|
 | `39896987585` | `d773a12` | ✅ owner keystore | 18,378,004 B | `signer-533D76ED5C2E264779EE005C` | `533D76ED5C2E264779EE005C…` |
 | `39897192094` | `d773a12` | ✅ owner keystore | 18,378,004 B | `signer-533D76ED5C2E264779EE005C` | `533D76ED5C2E264779EE005C…` |
+| `39899516617` | `ae99883` | ✅ owner keystore | 18,378,006 B | `signer-533D76ED5C2E264779EE005C` | `533D76ED5C2E264779EE005C…` |
 
 Compare with §5a: two runs of one tree previously produced *different* certificates
 (`DC13157E…` vs `B988DBD3…`). Now the same fingerprint twice, from the owner's key —
