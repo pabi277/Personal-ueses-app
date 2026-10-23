@@ -32,6 +32,20 @@ interface AppInfoDao {
     @Query("UPDATE app_info SET category = :category WHERE packageName = :packageName")
     suspend fun updateCategory(packageName: String, category: String)
 
+    /**
+     * F2 — the write path per-app limits never had.
+     *
+     * `limitMin` is nullable, so the same statement both sets and clears a limit: pass a
+     * number to set it, `null` to fall back to the category budget. Nothing writes `0`, which
+     * would read as "a limit of zero minutes" rather than "no per-app limit".
+     */
+    @Query("UPDATE app_info SET limitMin = :limitMin WHERE packageName = :packageName")
+    suspend fun setPerAppLimit(packageName: String, limitMin: Int?)
+
+    /** Only apps with an explicit limit, for the Limits screen's summary. */
+    @Query("SELECT * FROM app_info WHERE limitMin IS NOT NULL AND limitMin > 0 ORDER BY label")
+    suspend fun withPerAppLimit(): List<AppInfoEntity>
+
     // `alwaysAllowed` is INTEGER NOT NULL with no SQL default, so omitting it made
     // every row violate the constraint and INSERT OR IGNORE dropped it silently —
     // app_info stayed empty while app_usage filled up (found in the owner's

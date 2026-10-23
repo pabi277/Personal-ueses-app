@@ -28,11 +28,14 @@ class BlockScreenActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val pkg = intent.getStringExtra("package") ?: ""
+        // F2: the number that actually triggered this block, not a placeholder 0.
+        val effectiveLimit = intent.getIntExtra("limitMin", 0)
         setContent {
             io.github.pabi277.dayledger.ui.theme.DayLedgerTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     BlockScreen(
                         packageName = pkg,
+                        limitMin = effectiveLimit,
                         onExtend = {
                             CoroutineScope(Dispatchers.IO).launch {
                                 val db = DayLedgerDatabase.getInstance(this@BlockScreenActivity)
@@ -40,7 +43,7 @@ class BlockScreenActivity : ComponentActivity() {
                                     io.github.pabi277.dayledger.data.LimitEventEntity(
                                         dateKey = LocalDate.now().toString(),
                                         packageName = pkg,
-                                        limitMin = 0,
+                                        limitMin = effectiveLimit,
                                         reachedAt = System.currentTimeMillis(),
                                         action = "block",
                                         blockDurationMin = 10,
@@ -57,7 +60,7 @@ class BlockScreenActivity : ComponentActivity() {
                                     io.github.pabi277.dayledger.data.LimitEventEntity(
                                         dateKey = LocalDate.now().toString(),
                                         packageName = pkg,
-                                        limitMin = 0,
+                                        limitMin = effectiveLimit,
                                         reachedAt = System.currentTimeMillis(),
                                         action = "block",
                                         overrideType = "pin"
@@ -75,7 +78,13 @@ class BlockScreenActivity : ComponentActivity() {
 }
 
 @Composable
-fun BlockScreen(packageName: String, onExtend: () -> Unit, onUnlock: () -> Unit, onClose: () -> Unit) {
+fun BlockScreen(
+    packageName: String,
+    limitMin: Int,
+    onExtend: () -> Unit,
+    onUnlock: () -> Unit,
+    onClose: () -> Unit
+) {
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
         verticalArrangement = Arrangement.Center,
@@ -83,7 +92,10 @@ fun BlockScreen(packageName: String, onExtend: () -> Unit, onUnlock: () -> Unit,
     ) {
         Text("Time's up for $packageName", style = MaterialTheme.typography.headlineMedium)
         Spacer(Modifier.height(8.dp))
-        Text("You've reached your limit. Take a breath.")
+        Text(
+            if (limitMin > 0) "You've reached your ${limitMin} min limit. Take a breath."
+            else "You've reached your limit. Take a breath."
+        )
         Spacer(Modifier.height(24.dp))
         Button(onClick = onExtend) { Text("Extend 10 min (once)") }
         Spacer(Modifier.height(8.dp))
