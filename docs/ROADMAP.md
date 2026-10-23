@@ -180,6 +180,14 @@ stays Day Ledger. A later checklist schema increment must add an explicit migrat
 from v5 and rerun the full supported-source matrix. The full device matrix remains
 Phase 15.
 
+### Follow-up queue (owner-directed, after Phase 7 closes)
+
+| # | Item | Scope | Status |
+|---|---|---|---|
+| F1 | **R2a — suggested default categories** (owner, 2026-10-23): the Categories screen suggests a category per unclassified app from the device's `ApplicationInfo.category` + system-life-app rule; the owner accepts with one tap; existing assignments are never overwritten or re-suggested; ambiguous apps get no suggestion; earning apps are never auto-suggested. No schema change, no new permission, mapping unit-tested with fictional packages. | small increment, after Phase 7 | 📋 planned |
+| F2 | **Per-app `limitMin` has no write path** — the Limits screen only toggles always-allowed, so R16's per-app limits are unimplemented rather than unpersisted. Needs an owner decision on whether Phase 8 or a dedicated limits increment implements it. | Phase 4 scope | 📋 planned |
+| F3 | **Check in the canonical Room schema** (`app/schemas/…/5.json`) — CI exports and verifies it every run, but the file is not in the tree because artifact downloads are blocked in the agent's environment. One download closes it. | housekeeping | 📋 planned |
+
 ### Phase 8 — Checklist core
 
 **Parts**

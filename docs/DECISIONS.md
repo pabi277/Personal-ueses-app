@@ -295,6 +295,21 @@
   paise, local-date keys, append-only history, every aggregate recomputable from raw
   rows and unit-tested. Sketch only — no code in plan docs. Reversible.
 
+## Owner update — default categories (2026-10-23)
+
+- **Asked:** whether app categories should be filled in "by default" instead of being
+  assigned app by app. **Answer: suggestions the owner confirms — not silent auto-fill**,
+  and the work is scheduled **after Phase 7 closes**, not inside the data-safety phase.
+- Recorded as **R2a** in `docs/REQUIREMENTS.md`. Rationale kept with the decision:
+  silently pre-filling would make the app's own guess look like the owner's judgement,
+  and the Categories screen is the one place where his intent is the data. A suggestion
+  he taps is unambiguously his.
+- Constraints carried into that work: use only the device's own
+  `ApplicationInfo.category` plus the system-life-app rule, never a committed list of
+  real third-party packages, never overwrite or re-suggest an existing assignment, give
+  **no** suggestion when the signal is ambiguous, and never auto-suggest earning apps.
+- Trigger for starting it: Phase 7 marked ✅ (its P0 item) and merged.
+
 ## Open (current owner gates)
 
 - The 2026-10-15 decision batches and the 2026-10-22 product/delivery gate answers
