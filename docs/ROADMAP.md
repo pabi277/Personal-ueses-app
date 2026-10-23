@@ -238,7 +238,7 @@ upgrade; the first screen follows UI Design v2 and displays Daily Logger while
 > Top 3 is per date, capped at three, editable from Plan, and Plan now lists the date's
 > checklist items — the gap Phase 8 left open. Run `39915691906` is green on **102** tests,
 > with one signer and `room-schema` 2,406 B, and the owner's device smoke check reports all
-> six checks passing. Not yet merged to `main`. Full record: [`docs/phases/09-capture-deadlines-carryover.md`](phases/09-capture-deadlines-carryover.md).
+> six checks passing. **Merged to `main` in PR #26 (2026-10-23)** with F2 and F3. Full record: [`docs/phases/09-capture-deadlines-carryover.md`](phases/09-capture-deadlines-carryover.md).
 
 **Parts**
 

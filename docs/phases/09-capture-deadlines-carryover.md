@@ -140,5 +140,4 @@ Every clause of the roadmap's Done-means sentence for this phase is met:
 | Midnight rollover does not duplicate occurrences | deterministic `carried:` ids + conflict-ignoring insert, SQL-tested; device check 4 confirms |
 | Every unfinished item gets an explicit next action | day close lists every leftover on or before the day; `isLeftover` admits only `pending`/`later`, and nothing carries itself |
 
-**Not yet merged to `main`.** This phase's branch sits two commits ahead of `66582f1` and
-awaits an explicit merge command, exactly as Phase 8 did.
+**Merged to `main` on 2026-10-23 in PR #26.** This phase's branch sat ten commits ahead of `66582f1`, and that merge carried Phase 9 together with the two follow-ups that closed on top of it: F2 (per-app limits) and F3 (the canonical v7 schema baseline). Their evidence lives in [`docs/ROADMAP.md`](../ROADMAP.md).

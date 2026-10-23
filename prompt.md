@@ -210,8 +210,8 @@
    Schedule, Shrink to Minimum, Drop) and never rolls an item silently; carried ids are
    deterministic so a retried rollover cannot duplicate. Top 3 is per date and Plan now
    renders the date's checklist items. Run `39915691906` is green (102 tests) and the
-   owner's device smoke check reports all six checks passing. **Not yet merged to `main`** —
-   awaiting an explicit merge command. Record:
+   owner's device smoke check reports all six checks passing. **Merged to `main` in PR #26
+   (2026-10-23)**, together with F2 and F3 below. Record:
    `docs/phases/09-capture-deadlines-carryover.md`.
 5. **F2 (per-app limits) is ✅ built (2026-10-23).** The owner's rule — a per-app limit
    overrides the category budget, which then applies only to apps with no explicit limit —
