@@ -232,10 +232,15 @@
    authorize a CI step that puts the JSON where the API can read it (an issue body works).
 7. **The 21 open issues are all auto-filed `CI build failure` reports and all describe
    failures that no longer reproduce** — see `docs/ci-issue-triage.md` for the per-issue
-   mapping to the run that filed it and the green evidence that closed it. None has been
-   closed: closing is an owner command. The auto-filer itself has three defects worth a
-   gate (it lists *every* test under "failing unit tests", it filed an empty issue #16, and
-   it refiles the same failure on every push); no workflow change has been made.
+   mapping to the run that filed it and the green evidence that retired it. **The owner
+   commanded closing all 21 on 2026-10-23 and that command is still open:** the sandbox's
+   GitHub connection has `contents: write` but no `issues: write`, so every comment/close
+   attempt returned 403 `Resource not accessible by integration` and no issue was touched.
+   Finish it either by reconnecting GitHub with issue permissions, or — only with an
+   explicit gate answer — a one-shot `workflow_dispatch` job using the Actions
+   `GITHUB_TOKEN`, which does have `issues: write`. The auto-filer itself has three defects
+   worth a gate (it lists *every* test under "failing unit tests", it filed an empty issue
+   #16, and it refiles the same failure on every push); no workflow change has been made.
 8. End each implementation phase with CI green and its `app-progress-apk`; the
    owner installs it and records a short smoke check plus the phase-specific
    evidence in the phase record. Update roadmap/prompt and stop at the merge gate.
