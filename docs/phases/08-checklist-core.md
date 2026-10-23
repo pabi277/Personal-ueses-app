@@ -187,6 +187,29 @@ Still open, unchanged: `schemas/…/5.json` is absent from the tree (follow-up F
 will not regenerate a superseded version, so F3 needs an artifact download rather than a
 normal commit.
 
+## 7a. Plan screen — fixed on the owner's command (2026-10-23)
+
+The Plan screenshot from the smoke check showed two things that predate Phase 8, and the
+owner directed that they be fixed now rather than queued.
+
+**The layout.** Every template sat in a single `Row` of chips. On a 360dp screen that
+overflowed, and the card rendered as a mostly-empty box with a stray scroll artefact.
+Each template now gets a full-width row: its name, **how many blocks it would apply**
+("Empty template" when none), and **Apply** / **Delete**. Apply is disabled for an empty
+template, so tapping it cannot silently wipe a day with nothing.
+
+**The seeded routines.** `PlanningRepository` seeded four templates *with blocks already
+filled in* — `College day` 08:00–16:00 plus study, `Study day` ×2, `Earning day`
+×2 "Offerwall", `Off day` "Light task". That is a routine guessed on the owner's behalf,
+which `docs/DECISIONS.md` and UI Design v2 §2 both forbid ("never seed a personal timetable,
+routine, app list or real task"; examples stay generic). Fresh installs now seed two
+**empty** placeholders, `Template A` and `Template B`.
+
+**Nothing was deleted.** The four pre-filled templates are still in the owner's database,
+because an upgrade must not silently remove something he may have edited — it would also be
+a destructive change dressed up as a fix. He can now delete any of them from the Plan
+screen, which is the honest way round: the app stops guessing, and he decides what goes.
+
 ## 8. What Phase 8 still needs before it can be marked ✅
 
 1. ~~The workflow guard fix, then a green run with `app-progress-apk` uploaded.~~ Done:

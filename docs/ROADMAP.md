@@ -201,7 +201,9 @@ Phase 15.
 > fixed after an owner gate answer and no longer pins a version. Phase 8 is **not** marked
 > ✅: nine Done-means clauses passed on the owner's device, but the *positive* half of
 > generation (a habit appearing on its own scheduled day) and tomorrow's non-recurrence
-> are still owed. Three UI defects the smoke check caught are fixed. Full record:
+> are still owed. Three UI defects the smoke check caught are fixed, and the Plan screen's
+> overflowing template row and its four pre-filled seeded routines were fixed on the
+> owner's command (`6738430`). Full record:
 > [`docs/phases/08-checklist-core.md`](phases/08-checklist-core.md).
 
 **Parts**
