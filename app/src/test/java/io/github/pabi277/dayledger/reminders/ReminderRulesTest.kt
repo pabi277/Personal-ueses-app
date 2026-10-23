@@ -32,6 +32,7 @@ class ReminderRulesTest {
         profile: ReminderProfile = ReminderProfile.CORE,
         audibleFires: Int = 0,
         lastFireAt: Long? = null,
+        anchorMillis: Long? = null,
         dateKey: String = day.toString(),
         windowStartMin: Int? = null,
         snoozeUntil: Long? = null,
@@ -48,6 +49,7 @@ class ReminderRulesTest {
         profile = profile,
         audibleFires = audibleFires,
         lastFireAt = lastFireAt,
+        anchorMillis = anchorMillis,
         coreFiresToday = coreFires,
         generalFiresToday = generalFires,
         policy = policy
@@ -58,11 +60,40 @@ class ReminderRulesTest {
     // ------------------------------------------------------------- cadence
 
     @Test
-    fun `a core reminder is due immediately when nothing has fired yet`() {
+    fun `a newly tracked item waits a short grace before its first reminder`() {
         val plan = ReminderRules.plan(base(now = "09:00"))
         assertEquals(PlanStatus.SCHEDULED, plan.status)
-        assertEquals(at("09:00"), plan.atMillis)
+        assertEquals(at("09:00") + ReminderRules.FIRST_FIRE_GRACE_MILLIS, plan.atMillis)
         assertTrue(plan.audible)
+    }
+
+    /**
+     * The anchor is what keeps a first fire from sliding forward. Without it, every launch,
+     * action or retry would recompute "now + grace" and the reminder could never arrive.
+     */
+    @Test
+    fun `re-planning a pending first fire reproduces the same time`() {
+        val first = ReminderRules.plan(base(now = "09:00"))
+        val again = ReminderRules.plan(base(now = "09:03", anchorMillis = first.atMillis))
+        assertEquals(first.atMillis, again.atMillis)
+        assertEquals(PlanStatus.SCHEDULED, again.status)
+    }
+
+    @Test
+    fun `an anchor that has arrived is due now rather than postponed again`() {
+        val plan = ReminderRules.plan(
+            base(now = "09:05", anchorMillis = at("09:05"))
+        )
+        assertEquals(PlanStatus.SCHEDULED, plan.status)
+        assertEquals(at("09:05"), plan.atMillis)
+    }
+
+    @Test
+    fun `a late launch fires one reminder, not one per missed repeat`() {
+        // Generated this morning, app first opened at 21:00: a single fire is due.
+        val plan = ReminderRules.plan(base(now = "21:00", anchorMillis = at("09:05")))
+        assertEquals(PlanStatus.SCHEDULED, plan.status)
+        assertEquals(at("21:00"), plan.atMillis)
     }
 
     @Test

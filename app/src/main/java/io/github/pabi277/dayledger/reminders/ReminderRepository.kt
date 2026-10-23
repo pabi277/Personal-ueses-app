@@ -142,6 +142,7 @@ class ReminderRepository(
             profile = ReminderProfile.fromKey(state.profile),
             audibleFires = state.audibleFires,
             lastFireAt = state.lastFireAt,
+            anchorMillis = state.nextFireAt,
             coreFiresToday = eventDao.audibleCoreFires(todayKey),
             generalFiresToday = eventDao.audibleGeneralFires(todayKey),
             policy = policy()

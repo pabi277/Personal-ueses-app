@@ -120,6 +120,12 @@ data class ReminderInput(
     val profile: ReminderProfile = ReminderProfile.STANDARD,
     val audibleFires: Int = 0,
     val lastFireAt: Long? = null,
+    /**
+     * The persisted `nextFireAt` for this occurrence, if the scheduler has already decided
+     * one. It anchors the *first* fire so re-planning (every launch, every action, every
+     * retry) reproduces the same time instead of sliding it forward to "now".
+     */
+    val anchorMillis: Long? = null,
     val coreFiresToday: Int = 0,
     val generalFiresToday: Int = 0,
     val policy: ReminderPolicy = ReminderPolicy()
@@ -138,6 +144,15 @@ data class ReminderPolicy(
 )
 
 object ReminderRules {
+
+    /**
+     * How long a newly tracked item waits before its first reminder.
+     *
+     * Without this, the first sync after a launch would compute "now" and every pending
+     * item would alert the moment the app opened. Five minutes is long enough to finish
+     * what you opened the app for, short enough that the item is not forgotten.
+     */
+    const val FIRST_FIRE_GRACE_MILLIS = 5L * 60_000L
 
     fun plan(input: ReminderInput): ReminderPlan {
         val zone = input.zone
@@ -180,8 +195,13 @@ object ReminderRules {
                 input.lastFireAt!! + defaults.intervalMin!! * 60_000L
             // A single-fire profile that has already fired once.
             input.lastFireAt != null -> return stop(WaitReason.AUDIBLE_BUDGET)
+            // Anchor first: a reminder that was already decided must not be re-decided
+            // closer to "now" every time something re-plans it.
+            input.anchorMillis != null -> input.anchorMillis!!
             windowStart != null && windowStart > input.now -> windowStart
-            else -> input.now
+            // Just-created item: a short grace so opening the app does not pop a reminder
+            // in the same second, and so a first sync cannot fire a batch of them at once.
+            else -> input.now + FIRST_FIRE_GRACE_MILLIS
         }
 
         // Never replay a backlog: one late fire, not a burst.
