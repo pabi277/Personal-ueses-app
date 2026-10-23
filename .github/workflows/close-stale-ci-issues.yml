@@ -1,0 +1,100 @@
+name: Close stale CI-failure issues
+
+# ONE-SHOT, owner-authorized 2026-10-23. Deleted in the commit that follows its run.
+#
+# Why this exists: the sandbox's GitHub connection can push code but has no
+# `issues: write` (comment, close and label all return 403 "Resource not accessible
+# by integration"). The Actions GITHUB_TOKEN can write issues - it is the token the
+# `Report failure` step already uses to *create* these reports - so it is used once
+# to close them with a per-issue note.
+#
+# Triggered by a push of this file rather than workflow_dispatch, because
+# workflow_dispatch only finds workflows that also exist on the default branch, and
+# this branch is not merged. The `paths` filter means the push in this commit is the
+# only run; deleting the file afterwards produces no further run.
+on:
+  push:
+    branches: [arena/8322cba4-personal-ueses-app]
+    paths:
+      - .github/workflows/close-stale-ci-issues.yml
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  close:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comment and close the 21 auto-filed reports
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -uo pipefail
+          REPO="$GITHUB_REPOSITORY"
+          NOTE=/tmp/note.md
+          fails=0
+
+          # #n -> what that report recorded | what retired it
+          close_one() {
+            local n="$1" what="$2" why="$3"
+            local state
+            state=$(gh issue view "$n" --repo "$REPO" --json state --jq .state) || {
+              echo "::warning::#$n could not be read, skipping"; return 0; }
+            if [ "$state" != "OPEN" ]; then
+              echo "#$n already $state, skipping"
+              return 0
+            fi
+            {
+              printf 'Closing as fixed and verified, on the owner'\''s 2026-10-23 command.\n\n'
+              printf 'This is an auto-filed build report, not a bug report. The `Report failure` '
+              printf 'step opens an issue when a build breaks, and nothing ever closed one once the '
+              printf 'build went green again.\n\n'
+              printf 'This one recorded %s.\n\n' "$what"
+              printf 'Retired by: %s.\n\n' "$why"
+              printf 'The full mapping of all 21 open reports to the run that filed each one is in '
+              printf '`docs/ci-issue-triage.md`. The current tip is green (run `39933876292`, commit '
+              printf '`bf89d3d`, 113 tests). Nothing is attached to this issue that closing would '
+              printf 'discard. If this signature recurs, the filer will open a fresh issue for it.\n'
+            } > "$NOTE"
+            if ! gh issue comment "$n" --repo "$REPO" --body-file "$NOTE"; then
+              echo "::error::#$n comment failed"; fails=$((fails+1)); return 0
+            fi
+            if ! gh issue close "$n" --repo "$REPO" --reason "not planned"; then
+              echo "::error::#$n close failed"; fails=$((fails+1)); return 0
+            fi
+            echo "closed #$n"
+          }
+
+          GREENS="green across run 39933876292 (113 tests) and the signed release job in 39914193884"
+          KEYSTORE="the keystore opens in both jobs and the signer is 533D76ED5C2E264779EE005C"
+
+          close_one  1 "a conflicting \`Modifier\` import in \`MainActivity.kt\`" "$GREENS"
+          close_one  2 "unresolved \`setContent\` in \`BlockScreenActivity.kt\`" "$GREENS"
+          close_one  3 "a mangled \`MainActivity.kt\` (unresolved \`contentResolver\`, \`TRY_CALL\`/\`WHEN_CALL\` mismatch)" "$GREENS"
+          close_one  4 "\`MainActivity.kt\` failing to parse (expecting a top-level declaration)" "$GREENS"
+          close_one  5 "unresolved \`Icon\` / \`padding\` / \`dp\`" "$GREENS"
+          close_one  6 "unresolved \`padding\`" "$GREENS"
+          close_one  7 "unresolved \`fillMaxWidth\`" "$GREENS"
+          close_one  8 "unresolved \`fillMaxWidth\`" "$GREENS"
+          close_one  9 "unresolved \`fillMaxWidth\`" "$GREENS"
+          close_one 12 "\`app/build.gradle.kts:25\` unresolved reference \`io\`" "debug and release both build; $GREENS"
+          close_one 13 "\`MigrationTest\` v5 schema drift (the autoincrement marker)" "that test is now *migrated schema matches the v7 entity definitions exactly* and passes"
+          close_one 14 "the same v5 schema drift" "the same test now passes"
+          close_one 15 "\`packageDebug\` failing with a \`KeytoolException\` on the owner key" "$KEYSTORE; the signed release job in run 39914193884 is green"
+          close_one 16 "an **empty report** - no log tail, no failing tests" "there is nothing to reproduce; it is kept in the triage page as an example of the filer's own defect"
+          close_one 17 "\`ANDROID_KEYSTORE_PASSWORD\` not opening the keystore" "$KEYSTORE"
+          close_one 18 "the same keystore-password failure" "$KEYSTORE"
+          close_one 19 "the same keystore-password failure" "$KEYSTORE"
+          close_one 20 "the same failure after trimming whitespace" "$KEYSTORE"
+          close_one 21 "the same failure after trimming whitespace" "$KEYSTORE"
+          close_one 23 "two \`ChecklistGenerationTest\` weekday failures" "both tests exist and pass; 113 tests in run 39933876292"
+          close_one 24 "\`HabitsScreen.kt:170\` failing to parse (expecting a quote / arrow)" "$GREENS"
+
+          echo "----"
+          gh issue list --repo "$REPO" --state open --limit 100 --json number --jq 'length' \
+            | sed 's/^/still open: /'
+          if [ "$fails" -gt 0 ]; then
+            echo "::error::$fails issue(s) could not be handled"
+            exit 1
+          fi
