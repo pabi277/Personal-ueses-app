@@ -246,8 +246,9 @@
    `ReminderRules` (pure) owns cadence, quiet hours, pause, caps and the no-burst rule;
    `ReminderScheduler` is the only `AlarmManager` caller and is rebuilt from state on boot,
    `TIME_SET`, `TIMEZONE_CHANGED` and `MY_PACKAGE_REPLACED`; actions Done/Minimum/Later/Skip
-   reuse `ChecklistRepository.act`, with a stale tap recorded and ignored. Run `5f61bc2`
-   is green on **147** tests and `app-progress-apk` is 18,688,002 B with the same signer.
+   reuse `ChecklistRepository.act`, with a stale tap recorded and ignored. Run `39940754186`
+   (`ed359e3`) is green on **150** tests and `app-progress-apk` is 18,688,309 B with the
+   same signer.
    **The device check is owed** — seven checks in `docs/phases/10-reminder-engine.md` §8,
    of which reboot survival and "exactly one log" cannot be proven by CI at all. The MVP
    gate (14 real days of use) starts after Phase 10 is accepted, and its measurable

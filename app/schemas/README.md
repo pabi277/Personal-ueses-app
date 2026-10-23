@@ -37,7 +37,7 @@ needs the same one-time owner download.
 
 Schema v8 (Phase 10) added `reminder_states` and `reminder_events`, so the canonical export
 is now `8.json`. It is **not committed yet**: the artifact download still fails in the agent
-sandbox (`room-schema` from run `5f61bc2`, 6,413 B, contains both files). One download from
+sandbox (`room-schema` from run `39940754186`, 6,575 B, contains both files). One download from
 the owner closes it, exactly as it did for `7.json`.
 
 ## Rules for this directory

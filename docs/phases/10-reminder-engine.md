@@ -49,6 +49,10 @@ types, so the awkward cases are testable:
 - **Caps** are separate for Core and everything else, and reset at local midnight.
 - **No catch-up burst.** A computed fire time already in the past is clamped to *now* and
   returned as a single fire. Being three hours late does not mean twelve notifications.
+- **A first fire is anchored.** The persisted `nextFireAt` is the anchor, so re-planning —
+  every launch, every action, every retry — reproduces the same time instead of sliding it
+  forward, and a newly tracked item waits a five-minute grace rather than alerting the
+  second the app opens. Without the anchor the reminder could never arrive at all.
 - **Terminal states.** Done, Minimum, Skip, carried, scheduled and dropped all stop the
   occurrence; yesterday's item never rings today.
 
@@ -105,10 +109,10 @@ A **Reminders** screen under More:
 
 ## 7. Evidence — CI only so far
 
-Run `5f61bc2`, Android CI, success:
+Run `39940754186` (commit `ed359e3`), Android CI, success:
 
-- **147 unit tests** (113 before this phase; 28 rule tests + 6 SQL tests).
-- `app-progress-apk` 18,688,002 B, `room-schema` 6,413 B, signer unchanged at
+- **150 unit tests** (113 before this phase; 31 rule tests + 6 SQL tests).
+- `app-progress-apk` 18,688,309 B, `room-schema` 6,575 B, signer unchanged at
   `533D76ED5C2E264779EE005C`.
 - The migration guard proves v1–v8 all reach v8 with every row intact and the exact
   expected table set.
@@ -118,7 +122,7 @@ observed on a phone.
 
 ## 8. Owner device check (owed)
 
-Install `app-progress-apk` from run `5f61bc2` and record each:
+Install `app-progress-apk` from run `39940754186` and record each:
 
 1. **Fires at all** — a reminder appears for an open item; Done from the notification
    completes it in Today.

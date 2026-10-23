@@ -270,8 +270,8 @@ explicit next action rather than silently rolling forever.
 > Scheduling is rebuildable: `BootReceiver` now rebuilds on boot, `TIME_SET`,
 > `TIMEZONE_CHANGED` and `MY_PACKAGE_REPLACED` from persisted state. When Android refuses an
 > exact alarm the reminder still fires inexactly, and the Reminders screen says the timing is
-> approximate rather than pretending. Run `5f61bc2` is green on **147** tests (28 rule
-> tests + 6 SQL tests new), `app-progress-apk` 18,688,002 B, signer unchanged.
+> approximate rather than pretending. Run `39940754186` (`ed359e3`) is green on **150** tests
+> (31 rule tests + 6 SQL tests new), `app-progress-apk` 18,688,309 B, signer unchanged.
 > **Not Done yet:** "survives reboot and creates exactly one log" is device evidence, and
 > none has been reported. Seven checks are listed in
 > [`docs/phases/10-reminder-engine.md`](phases/10-reminder-engine.md) §8.
