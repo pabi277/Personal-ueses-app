@@ -153,12 +153,12 @@ class MigrationTest {
     @Test
     fun `every step exists with the expected start and end versions`() {
         assertEquals(
-            listOf(1 to 2, 2 to 3, 3 to 4, 4 to 5, 5 to 6, 6 to 7),
+            listOf(1 to 2, 2 to 3, 3 to 4, 4 to 5, 5 to 6, 6 to 7, 7 to 8),
             DatabaseMigrations.STEPS.map { it.from to it.to }
         )
-        assertEquals(6, DatabaseMigrations.ALL.size)
-        assertEquals(7, DatabaseMigrations.CURRENT_VERSION)
-        assertEquals(listOf(1, 2, 3, 4, 5, 6, 7), DatabaseMigrations.SUPPORTED_VERSIONS)
+        assertEquals(7, DatabaseMigrations.ALL.size)
+        assertEquals(8, DatabaseMigrations.CURRENT_VERSION)
+        assertEquals(listOf(1, 2, 3, 4, 5, 6, 7, 8), DatabaseMigrations.SUPPORTED_VERSIONS)
     }
 
     @Test
@@ -236,8 +236,8 @@ class MigrationTest {
                         "app_info", "app_usage", "blocks", "categories", "checklist_occurrences",
                         "checklist_tasks", "completion_logs", "day_plans", "earnings", "habit_rules",
                         "hourly_usage", "inbox_items", "learning", "limit_events",
-                        "notification_log", "notification_rules", "settings", "template_items",
-                        "templates"
+                        "notification_log", "notification_rules", "reminder_events",
+                        "reminder_states", "settings", "template_items", "templates"
                     ),
                     it.tableNames().toSet()
                 )
