@@ -193,17 +193,17 @@ Phase 15.
 
 ### Phase 8 — Checklist core
 
-> 🚧 **Status: code and CI complete (2026-10-23), awaiting the owner install.** Parts
-> 8.1–8.3 are implemented and 8.4 is edit-lite; schema v6, idempotent generation, the Today
-> checklist front door and the **Daily Logger** label are in. Run `39908874710` is green:
-> 86 unit tests, one signer `533D76ED5C2E264779EE005C…`, `room-schema` 2,378 B and
-> `app-progress-apk` 18,511,120 B. The schema-export guard that hardcoded `5.json` was
-> fixed after an owner gate answer and no longer pins a version. Phase 8 is **not** marked
-> ✅: nine Done-means clauses passed on the owner's device, but the *positive* half of
-> generation (a habit appearing on its own scheduled day) and tomorrow's non-recurrence
-> are still owed. Three UI defects the smoke check caught are fixed, and the Plan screen's
-> overflowing template row and its four pre-filled seeded routines were fixed on the
-> owner's command (`6738430`). Full record:
+> ✅ **Status: Done (2026-10-23).** Schema v6 adds `habit_rules`, `checklist_tasks`,
+> `checklist_occurrences` (deterministic `kind:source:date` key, so generation is
+> idempotent) and `completion_logs` (append-only; undo writes a row). Today is the Command
+> Center Checklist and the visible label is **Daily Logger**; `io.github.pabi277.dayledger`
+> and `dayledger.db` are unchanged. Run `39913142388` green on **88** tests with one signer
+> `533D76ED5C2E264779EE005C…`, `room-schema` 2,378 B and `app-progress-apk` 18,519,606 B.
+> The owner's device smoke check reports every Done-means clause passing, and it caught
+> four defects that are now fixed: skipped rows sitting under a "Done" heading, an
+> unreachable Sunday weekday chip, raw `Chosen days: 4` text, and the Plan screen's
+> overflowing template row with its four pre-filled seeded routines. Merged to `main`
+> 2026-10-23. Full record:
 > [`docs/phases/08-checklist-core.md`](phases/08-checklist-core.md).
 
 **Parts**

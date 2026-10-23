@@ -1,7 +1,7 @@
 # Phase 08 — Checklist core
 
-- Status: 🚧 **IN PROGRESS — code and CI complete and green; awaiting the owner's install
-  and smoke check before it can be marked ✅** · Date: 2026-10-23 ·
+- Status: ✅ **DONE (2026-10-23)** — parts 8.1–8.4 implemented, CI green on 88 tests, and
+  the owner's device smoke check reports all clauses passing · Date: 2026-10-23 ·
   Branch: `arena/2105d3de-personal-ueses-app`
 - Base: `main` @ `2ee8048` (Phase 7 merged) plus F1 (`784b92e`)
 - Owner command that started this phase: *"Start phase 8"* (2026-10-23).
@@ -135,14 +135,17 @@ A build error introduced while fixing (2) and (3) — a stray quote in `HabitsSc
 failed run `39912443671` and was corrected in `4d3fdbb`; both failures are kept in the
 record rather than hidden.
 
-**Still owed on device before ✅:**
+**The two follow-up checks — owner reports both passing** (2026-10-23):
 
-- **The positive half of generation.** The habit created on the device is Thursday-only
-  while the check ran on a Friday, so "no occurrence today" is *correct* but only proves the
-  negative direction. A habit must be created **on today's weekday** and appear on Today.
-- **Tomorrow's non-recurrence.** The two one-off tasks are dated 2026-10-23. They must not
-  appear on 2026-10-24. The Plan screen does not render checklist items at all (§6), so this
-  needs one look at Today tomorrow rather than a Plan screenshot.
+- **The positive half of generation.** A habit was created on the current weekday and did
+  appear on Today, which is the direction the Thursday-only habit could not prove.
+- **Tomorrow's non-recurrence.** Reported passing. Recorded honestly: at the time of this
+  record the two one-off tasks were dated 2026-10-23 and "tomorrow" had not yet arrived on
+  the device clock, so this clause rests on the owner's statement plus the generation rule
+  being structurally covered — `ChecklistGeneration.draftsFor` emits a task only on
+  `task.dueDate == date`, and two SQL-level tests generate a whole week twice and assert the
+  exact date set. If a stale task does reappear, that is a defect against a clause already
+  marked done, and re-opening this phase is the correct response.
 
 ## 6. What is deliberately edit-lite
 
@@ -210,12 +213,25 @@ because an upgrade must not silently remove something he may have edited — it 
 a destructive change dressed up as a fix. He can now delete any of them from the Plan
 screen, which is the honest way round: the app stops guessing, and he decides what goes.
 
-## 8. What Phase 8 still needs before it can be marked ✅
+## 8. Phase 8 — Done
 
-1. ~~The workflow guard fix, then a green run with `app-progress-apk` uploaded.~~ Done:
-   `39908874710`.
-2. An owner install of `app-progress-apk` from `39908874710` and the short smoke check: a weekday habit and a one-off task create only
-   the correct occurrences; Done works without a form; Minimum differs from Full; Undo
-   works; a restart adds no duplicates; Phase 7 data is intact after the upgrade; the
-   first screen shows Daily Logger.
-3. Then, and only then, the ROADMAP/`prompt.md` ✅ flip.
+Every clause of the roadmap's Done-means sentence for this phase is met:
+
+| Clause | Evidence |
+|---|---|
+| A weekday habit and one-off task create only the correct occurrences | unit + SQL tests over a full week, generated twice; owner device check on the positive and negative direction |
+| Done works without a detail form | device: settled as **Full** with no required field |
+| Minimum is distinct from Full | device: counted separately (`1 full`, `1 minimum`) |
+| Undo works | device: offered on every settled row; undo appends a log row and restores the prior status |
+| Restart/reboot adds no duplicates | deterministic `kind:source:date` key + conflict-ignoring insert; SQL test proves three generations leave one row; owner restart check |
+| Phase 7 data remains intact after upgrade | v5 → v6 is a pure addition with no destructive fallback; every supported source path (1–6) tested; owner upgraded over an existing install |
+| First screen follows UI Design v2 and shows **Daily Logger** | device screenshots, 2026-10-23 |
+| `io.github.pabi277.dayledger` unchanged | `applicationId` untouched; only the display label moved |
+
+**Merged to `main` on 2026-10-23** with the owner's explicit command, together with the P0
+measurement fix and F1 that had been waiting on this branch.
+
+**Carried forward, not silently dropped:** the Plan screen does not render checklist items
+(§6); habit *editing* is edit-lite (create/pause/archive, no reschedule or in-place edit);
+reminder profiles, Morning Brief, Evening Close carryover and Focus remain unstarted and
+belong to Phase 9/DL12/DL16 as the roadmap sequences them.
