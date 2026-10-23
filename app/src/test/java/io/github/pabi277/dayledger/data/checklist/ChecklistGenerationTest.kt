@@ -58,7 +58,7 @@ class ChecklistGenerationTest {
     @Test
     fun `a weekly habit generates only on its one day`() {
         val weekly = habit(cadence = Cadence.WEEKLY, weekdays = setOf(3))
-        assertEquals(2, ChecklistGeneration.isoWeekday(wednesday))
+        assertEquals(3, ChecklistGeneration.isoWeekday(wednesday))
         assertTrue(ChecklistGeneration.isScheduledOn(weekly, wednesday))
         assertTrue(!ChecklistGeneration.isScheduledOn(weekly, monday))
     }
@@ -124,7 +124,7 @@ class ChecklistGenerationTest {
     @Test
     fun `weekday parsing ignores junk and out-of-range values`() {
         assertEquals(setOf(1, 3, 5), ChecklistGeneration.parseWeekdays("1,3,5"))
-        assertEquals(setOf(1, 3), ChecklistGeneration.parseWeekdays(" 1, 3 ,9,0,x,7"))
+        assertEquals(setOf(1, 3, 7), ChecklistGeneration.parseWeekdays(" 1, 3 ,9,0,x,7"))
         assertEquals("1,3,5", ChecklistGeneration.formatWeekdays(setOf(5, 1, 3)))
     }
 
