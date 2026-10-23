@@ -62,8 +62,9 @@ Bootstrapped from AppFlow @ c8856022ca57cdf23ae78b9491481543db89438d on 2026-10-
 
 ### Phase 7 — Data safety and migration foundation (no checklist features)
 
-> 🚧 **Status: parts 7.1–7.5 complete, CI-verified and exercised on the owner's
-> device; only the P0 comparison remains (2026-10-23).** The signing gate failed first
+> ✅ **Status: Done (2026-10-23) — P0 passes on the owner's phone: Today 2 h 47 m
+> against Digital Wellbeing's 2 h 54 m (−4.0 %) and top app Chrome 57 m against 1 h 2 m
+> (−8.1 %), both inside the ~10 % the kill test allows.** The signing gate failed first
 > and was closed by evidence afterwards: progress APKs were signed by a per-runner
 > throwaway key (measured — `DC13157E…` vs `B988DBD3…` on one tree) and the release job
 > was missing the name `ANDROID_KEYSTORE_BASE64`; the owner then created a keystore
@@ -78,8 +79,10 @@ Bootstrapped from AppFlow @ c8856022ca57cdf23ae78b9491481543db89438d on 2026-10-
 > update-over-install of a later owner-keyed APK, and a restore corroborated by the
 > owner's own exports — seven historical days return identical after clear-data and six
 > configuration tables return row-for-row identical; the `app_info` fix shows 0 → 72
-> labelled rows. **Outstanding to mark Done:** the P0 number comparison against Digital Wellbeing that this phase's
-> Done-means requires before Phase 8. Evidence:
+> labelled rows. **P0 was measured, failed at +97 %, the measurement was rebuilt as
+> screen-on clipped foreground time with launcher/system UI/dialer excluded, and the
+> re-measure passed** — the failure and its diagnosis are kept in the phase record because
+> they are what closed the gate. Evidence:
 > [`docs/phases/07-data-safety-migration.md`](phases/07-data-safety-migration.md).
 
 #### Historical Room inventory (verified from Git history, 2026-10-22)

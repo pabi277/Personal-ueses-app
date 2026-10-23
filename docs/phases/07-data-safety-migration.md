@@ -1,8 +1,10 @@
 # Phase 07 — Data safety and migration foundation
 
-- Status: 🚧 **IN PROGRESS — parts 7.1–7.4 CI-verified, signing gate CLOSED by
-  evidence (2026-10-23), owner device evidence partly recorded** · Date: 2026-10-23 ·
-  Branch: `arena/0276c412-personal-ueses-app`
+- Status: ✅ **DONE (2026-10-23) — parts 7.1–7.5 CI-verified, signing gate closed by
+  evidence, owner device evidence recorded, and P0 passes on the owner's phone
+  (Today 2 h 47 m vs Digital Wellbeing 2 h 54 m; §9e)** · Date: 2026-10-23 ·
+  Branch: `arena/0276c412-personal-ueses-app` (phase work);
+  `arena/2105d3de-personal-ueses-app` (P0 re-measure and the measurement rebuild, §9d–§9e)
 - Base: `main` @ `8070713` (merge commit of PR #11)
 - Round 1 (evidence only) wrote no code. Round 2 wires the owner-approved signing
   identity (§8) — the one change the gate authorised — and **still writes no Phase 7
@@ -872,11 +874,67 @@ schema, the version or the tables.
    Unclassified and Life 1 h 00 m against a 120 m budget, which is expected until the owner
    re-enters assignments once.
 
-Phase 7 therefore **stays 🚧**: every part (7.1–7.5) is implemented and CI-verified, but P0
-is now a *measured* failure rather than an open question, and it closes only when the
-owner's own two numbers agree.
+Phase 7 therefore **stayed 🚧 at the end of this round**: every part (7.1–7.5) was
+implemented and CI-verified, but P0 was a *measured* failure rather than an open question,
+and it could only close when the owner's own two numbers agreed. They did, on the fixed
+build — see §9e.
 
-## 10. How this phase becomes Done
+## 9e. Round 8 — the re-measure passes: Phase 7 closes (2026-10-23)
+
+### 9e.1 Owner-device evidence: P0 passes on the fixed build
+
+The owner installed the `app-progress-apk` from run `39906592546` (commit `3a7d15c`),
+opened Day Ledger → Today → Refresh, and captured both screens again:
+`Digital Wellbeing` at 11:10:36 and `Day Ledger` at 11:11:04 with an `as of 11:10` stamp,
+so the two readings are the same minute of the same day.
+
+| | Digital Wellbeing → Dashboard → Today | Day Ledger → Today | Δ | Within ~10 % |
+|---|---|---|---|---|
+| **Total** | **2 h 54 m** (174 min) | **2 h 47 m** (167 min) | −7 min → **−4.0 %** | ✅ |
+| Top app | Chrome **1 h 2 m** (62) | Chrome **57 m** | −5 min → **−8.1 %** | ✅ |
+| 2nd | YouTube **43 m** | YouTube **43 m** | 0 → **0.0 %** | ✅ |
+| 3rd | WhatsApp **17 m** | WhatsApp **17 m** (Life category) | 0 → **0.0 %** | ✅ |
+
+**P0 passes.** Total within 4.0 %, top app within 8.1 %, and the two lower-ranked apps
+agree exactly. Compare §9d.1: the same comparison was +97 % on the total and +44 % on the
+top app, with a ranking flip. Three other things in the same screenshot confirm the fix
+did what §9d.3 said it would:
+
+- **Launcher and dialer are gone.** `com.sec.android.app.launcher` (20 m) and
+  `com.samsung.android.incallui` (8 m) have disappeared from the list, which is the
+  28 minutes Digital Wellbeing never counted.
+- **Labels render.** The rows read `Chrome` and `YouTube`, not `com.android.chrome` —
+  the display defect noted at the end of §9d.1.
+- **The hourly strip is plausible.** Usage now clusters in the late-morning hours that
+  have actually happened rather than in the small hours, which was the signature of
+  sessions being force-closed at the query moment (§9d.2, cause 3).
+
+The residual error has a **direction**: Day Ledger now reads slightly *below* Digital
+Wellbeing (4 % on the total, 8 % on the top app). That is the conservative clipping from
+§9d.3 — an unknown screen state at a boundary counts nothing, and a session ends at
+`SCREEN_OFF` rather than being extended. Recording the direction matters for the next
+comparison: a reading that drifts *above* the OS would be a regression, a reading a few
+percent below is the expected shape.
+
+Category totals in the same screenshot are **not** part of P0 and should not be read as
+one: `Unclassified` still holds 2 h 29 m, because per-app assignments were wiped by the
+`app_info` defect and need one re-entry (F2). WhatsApp showing under `Life` 17 m is a real
+assignment that now persists — the write path the fix in §9c.3 restored.
+
+### 9e.2 Phase 7 status
+
+With P0 met, the roadmap's Done means for Phase 7 is satisfied on every clause: the
+supported v1–v4 → v5 upgrades are non-destructive and test-covered, the SAF backup/restore
+round trip is proven against the owner's own files, OS-backup exclusion is verified in the
+merged manifest, `app-progress-apk` is uploaded by every run, signing continuity has
+evidence from nine runs on one certificate, and P0 passes on the owner's phone.
+
+**Phase 7 is ✅ Done (2026-10-23).** Phase 8 has **not** started: no checklist model, no
+schema change, no database version bump, and the visible label is still Day Ledger. The
+follow-up queue (F1–F3) was unblocked by this closure; F1 is next unless the owner says
+otherwise.
+
+## 10. How this phase becomes Done — ✅ met on 2026-10-23
 
 Two evidence lines, kept separate so CI evidence and owner evidence can never be
 confused.
@@ -893,13 +951,14 @@ one owner-keyed signer `533D76ED5C2E264779EE005C…`.
 ✅ **restore corroborated by the owner's own files** — seven historical days return
 identical after clear-data, and six configuration tables return row-for-row identical
 (§9c.1) · ✅ the `app_info` fix verified on device, 0 → 72 labels (§9c.2).
-❌ the **P0 number comparison** — measured on 2026-10-23 and **failed**: Today 4 h 46 m
-against Digital Wellbeing's 2 h 25 m at the same minute, with the top app agreeing in
-identity but not in magnitude (§9d.1). The measurement was replaced (§9d.2–§9d.3) and is
-CI-green (`39906592546`, 52 tests), but no post-fix owner-device comparison exists yet:
-⬜ re-run P0 with the APK from `39906592546`, and ⬜ paste the on-screen status line
-(`Restore complete: … rows …`) if a quotable string is wanted.
+❌ the **P0 number comparison first failed** — Today 4 h 46 m against Digital Wellbeing's
+2 h 25 m at the same minute (§9d.1) — and then ✅ **passed on the re-measure** with the
+fixed measurement (§9e.1): Today 2 h 47 m against 2 h 54 m (−4.0 %) and the top app Chrome
+57 m against 1 h 2 m (−8.1 %), both inside the ~10 % the kill test allows. The failure is
+kept in this record rather than deleted, because it is what forced the measurement to be
+right. ⬜ the on-screen status line (`Restore complete: … rows …`) is still unpasted; it is
+a nicety, not a Done-means clause, and its absence does not hold the phase open.
 
-Phase 7 therefore stays 🚧 on one item only — P0 — even though every part (7.1–7.5) is
-implemented, CI-verified and exercised on the device. The item is now "re-measure after the
-fix", not "measure for the first time".
+**Phase 7 is ✅ Done (2026-10-23).** Every part (7.1–7.5) is implemented, CI-verified and
+exercised on the device, the signing gate is closed by evidence from nine runs, and P0 —
+the one item that gates Phase 8 — passes on the owner's own phone.
