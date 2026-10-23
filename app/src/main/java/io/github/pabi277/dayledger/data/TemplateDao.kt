@@ -20,4 +20,15 @@ interface TemplateDao {
 
     @Query("UPDATE templates SET lastUsedAt = :ts WHERE id = :id")
     suspend fun touch(id: String, ts: Long)
+
+    @Query("SELECT templateId, COUNT(*) AS itemCount FROM template_items GROUP BY templateId")
+    suspend fun itemCounts(): List<TemplateItemCount>
+
+    @Query("DELETE FROM template_items WHERE templateId = :id")
+    suspend fun deleteItems(id: String)
+
+    @Query("DELETE FROM templates WHERE id = :id")
+    suspend fun deleteTemplate(id: String)
 }
+
+data class TemplateItemCount(val templateId: String, val itemCount: Int)

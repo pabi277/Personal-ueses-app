@@ -40,11 +40,39 @@ fun PlanningScreen(state: PlanningUiState, viewModel: PlanningViewModel, dateKey
         item {
             AppCard(title = "Templates") {
                 if (state.templates.isEmpty()) {
-                    Text("No templates yet.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        "No templates yet.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 } else {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // One row per template, full width. The previous single Row of chips
+                    // overflowed on a 360dp screen and left the card looking empty
+                    // (owner screenshot, 2026-10-23).
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                         state.templates.forEach { t ->
-                            OutlinedButton(onClick = { viewModel.applyTemplate(t.id) }) { Text(t.name) }
+                            val count = state.templateItemCounts[t.id] ?: 0
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                            ) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(t.name, style = MaterialTheme.typography.titleMedium)
+                                    Text(
+                                        if (count == 0) "Empty template" else "$count block${if (count == 1) "" else "s"}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedButton(
+                                        onClick = { viewModel.applyTemplate(t.id) },
+                                        enabled = count > 0
+                                    ) { Text("Apply") }
+                                    OutlinedButton(onClick = { viewModel.deleteTemplate(t.id) }) { Text("Delete") }
+                                }
+                            }
                         }
                     }
                 }
