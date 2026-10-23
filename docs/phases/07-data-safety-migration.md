@@ -732,6 +732,33 @@ the restore:
 unimplemented rather than unpersisted. That is a Phase 4 scope question, outside this
 data-safety phase, and it belongs in the P0/Phase 8 conversation.
 
+## 9d. Merged to main (2026-10-23) and what the main run proved
+
+- PR **#22** opened from `arena/0276c412-personal-ueses-app` and merged with the owner's
+  explicit command; `main` moved from `8070713` to merge commit **`2ee8048`**
+  (35 commits, the whole phase).
+- PR CI before the merge: `Unit tests, debug build, progress APK` **pass** (run
+  `39902483507`), release job correctly skipped on a pull-request build.
+- The post-merge run on `main`, **`39902911376`, is fully green in both jobs**:
+  - `Unit tests, debug build, progress APK` — signing key prepared, 30 tests, APK
+    certificate recorded, OS-backup exclusion verified in the merged manifest, schema
+    exported, artifacts uploaded.
+  - **`Signed release AAB and APK` — success for the first time in this repository.**
+    Every earlier attempt failed at *Prepare signing key on runner*; with the owner's
+    keystore present the job built and uploaded `signed-android-release`
+    (24,550,572 bytes, AAB + APK) and recorded its certificate.
+- Artifacts from `39902911376`: `app-progress-apk` (18,378,042 B), `signed-android-release`
+  (24,550,572 B), `room-schema` (1,805 B), `signer-533D76ED5C2E264779EE005C` (464 B) —
+  the same certificate as every branch run, so branch and `main` share one signing
+  identity.
+- Consequence for the earlier warning: `main` artifacts are now signed with the owner's
+  key, so they are installable over the branch builds. The old "do not install a main-run
+  artifact" caution applied only while `main` had no signing config.
+
+**Phase status after the merge: still 🚧**, unchanged and for one reason only — the P0
+number comparison in §9c.3/§10. Merging shipped the code; it does not satisfy a
+device-evidence criterion.
+
 ## 10. How this phase becomes Done
 
 Two evidence lines, kept separate so CI evidence and owner evidence can never be

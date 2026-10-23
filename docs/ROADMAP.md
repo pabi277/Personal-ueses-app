@@ -62,8 +62,12 @@ Bootstrapped from AppFlow @ c8856022ca57cdf23ae78b9491481543db89438d on 2026-10-
 
 ### Phase 7 — Data safety and migration foundation (no checklist features)
 
-> 🚧 **Status: parts 7.1–7.5 complete, CI-verified and exercised on the owner's
-> device; only the P0 comparison remains (2026-10-23).** The signing gate failed first
+> 🚧 **Status: merged to `main` in PR #22 (merge commit `2ee8048`, 2026-10-23); parts
+> 7.1–7.5 complete, CI-verified and exercised on the owner's device; only the P0
+> comparison remains.** The post-merge `main` run `39902911376` is green in both jobs,
+> including the `Signed release AAB and APK` job that had failed since Phase 0 —
+> `signed-android-release` now builds with the owner's key, and every artifact carries
+> the same signer `533D76ED5C2E264779EE005C…`. The signing gate failed first
 > and was closed by evidence afterwards: progress APKs were signed by a per-runner
 > throwaway key (measured — `DC13157E…` vs `B988DBD3…` on one tree) and the release job
 > was missing the name `ANDROID_KEYSTORE_BASE64`; the owner then created a keystore
