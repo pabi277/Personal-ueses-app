@@ -141,3 +141,11 @@ Every clause of the roadmap's Done-means sentence for this phase is met:
 | Every unfinished item gets an explicit next action | day close lists every leftover on or before the day; `isLeftover` admits only `pending`/`later`, and nothing carries itself |
 
 **Merged to `main` on 2026-10-23 in PR #26.** This phase's branch sat ten commits ahead of `66582f1`, and that merge carried Phase 9 together with the two follow-ups that closed on top of it: F2 (per-app limits) and F3 (the canonical v7 schema baseline). Their evidence lives in [`docs/ROADMAP.md`](../ROADMAP.md).
+
+**Post-merge evidence (main run `39937466805`, merge commit `312f534`).** Both jobs green
+on `main` itself — *Unit tests, debug build, progress APK* and *Signed release AAB and APK*.
+113 tests, `room-schema` 3,781 B (now holding the committed `7.json`), `app-progress-apk`
+18,599,302 B, `signed-android-release` 24,812,903 B, and the release signer is still
+`533D76ED5C2E264779EE005C` — the same key as every phase since Phase 7. CI green is build
+evidence, not device evidence: the Phase 9 device checks above were reported by the owner
+before the merge and remain the only device evidence for this phase.

@@ -211,7 +211,8 @@
    deterministic so a retried rollover cannot duplicate. Top 3 is per date and Plan now
    renders the date's checklist items. Run `39915691906` is green (102 tests) and the
    owner's device smoke check reports all six checks passing. **Merged to `main` in PR #26
-   (2026-10-23)**, together with F2 and F3 below. Record:
+   (2026-10-23)**, together with F2 and F3 below; `main` run `39937466805` is green on both
+   jobs, release signer unchanged. Record:
    `docs/phases/09-capture-deadlines-carryover.md`.
 5. **F2 (per-app limits) is ✅ built (2026-10-23).** The owner's rule — a per-app limit
    overrides the category budget, which then applies only to apps with no explicit limit —
