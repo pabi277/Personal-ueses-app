@@ -4,6 +4,14 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import io.github.pabi277.dayledger.data.checklist.ChecklistOccurrenceDao
+import io.github.pabi277.dayledger.data.checklist.ChecklistOccurrenceEntity
+import io.github.pabi277.dayledger.data.checklist.ChecklistTaskDao
+import io.github.pabi277.dayledger.data.checklist.ChecklistTaskEntity
+import io.github.pabi277.dayledger.data.checklist.CompletionLogDao
+import io.github.pabi277.dayledger.data.checklist.CompletionLogEntity
+import io.github.pabi277.dayledger.data.checklist.HabitRuleDao
+import io.github.pabi277.dayledger.data.checklist.HabitRuleEntity
 import io.github.pabi277.dayledger.data.migrations.DatabaseMigrations
 
 @Database(
@@ -21,12 +29,20 @@ import io.github.pabi277.dayledger.data.migrations.DatabaseMigrations
         LearningEntryEntity::class,
         SettingEntity::class,
         NotificationRuleEntity::class,
-        NotificationLogEntity::class
+        NotificationLogEntity::class,
+        HabitRuleEntity::class,
+        ChecklistTaskEntity::class,
+        ChecklistOccurrenceEntity::class,
+        CompletionLogEntity::class
     ],
     version = DatabaseMigrations.CURRENT_VERSION,
     exportSchema = true
 )
 abstract class DayLedgerDatabase : RoomDatabase() {
+    abstract fun habitRuleDao(): HabitRuleDao
+    abstract fun checklistTaskDao(): ChecklistTaskDao
+    abstract fun checklistOccurrenceDao(): ChecklistOccurrenceDao
+    abstract fun completionLogDao(): CompletionLogDao
     abstract fun usageDao(): AppUsageDao
     abstract fun hourlyDao(): HourlyUsageDao
     abstract fun appInfoDao(): AppInfoDao
@@ -52,7 +68,7 @@ abstract class DayLedgerDatabase : RoomDatabase() {
                     DayLedgerDatabase::class.java,
                     "dayledger.db"
                 )
-                    // Explicit, non-destructive v1 → v2 → v3 → v4 → v5 steps.
+                    // Explicit, non-destructive v1 → v2 → … → v6 steps.
                     // There is deliberately NO fallbackToDestructiveMigration():
                     // an unknown schema must fail loudly instead of silently
                     // deleting the owner's history.

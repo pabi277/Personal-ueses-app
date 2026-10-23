@@ -152,10 +152,13 @@ class MigrationTest {
 
     @Test
     fun `every step exists with the expected start and end versions`() {
-        assertEquals(listOf(1 to 2, 2 to 3, 3 to 4, 4 to 5), DatabaseMigrations.STEPS.map { it.from to it.to })
-        assertEquals(4, DatabaseMigrations.ALL.size)
-        assertEquals(5, DatabaseMigrations.CURRENT_VERSION)
-        assertEquals(listOf(1, 2, 3, 4, 5), DatabaseMigrations.SUPPORTED_VERSIONS)
+        assertEquals(
+            listOf(1 to 2, 2 to 3, 3 to 4, 4 to 5, 5 to 6),
+            DatabaseMigrations.STEPS.map { it.from to it.to }
+        )
+        assertEquals(5, DatabaseMigrations.ALL.size)
+        assertEquals(6, DatabaseMigrations.CURRENT_VERSION)
+        assertEquals(listOf(1, 2, 3, 4, 5, 6), DatabaseMigrations.SUPPORTED_VERSIONS)
     }
 
     @Test
@@ -204,7 +207,7 @@ class MigrationTest {
     }
 
     @Test
-    fun `every supported start version reaches v5 with all its rows intact`() {
+    fun `every supported start version reaches v6 with all its rows intact`() {
         for (start in DatabaseMigrations.SUPPORTED_VERSIONS) {
             val conn = connect()
             conn.use {
@@ -215,7 +218,7 @@ class MigrationTest {
                     2 -> DatabaseMigrations.V1_TO_V2.forEach { sql -> it.exec(sql) }
                     3 -> DatabaseMigrations.statementsFrom(1).forEach { sql -> it.exec(sql) }
                     4 -> DatabaseMigrations.statementsFrom(1).forEach { sql -> it.exec(sql) }
-                    5 -> DatabaseMigrations.statementsFrom(1).forEach { sql -> it.exec(sql) }
+                    5, 6 -> DatabaseMigrations.statementsFrom(1).forEach { sql -> it.exec(sql) }
                 }
                 seedThrough(it, start)
 
@@ -224,13 +227,14 @@ class MigrationTest {
 
                 val remaining = DatabaseMigrations.statementsFrom(start)
                 remaining.forEach { sql -> it.exec(sql) }
-                it.exec("PRAGMA user_version = 5")
+                it.exec("PRAGMA user_version = 6")
 
-                assertEquals("start v$start: user_version", 5, it.readUserVersion())
+                assertEquals("start v$start: user_version", 6, it.readUserVersion())
                 assertEquals(
                     "start v$start: table set",
                     setOf(
-                        "app_info", "app_usage", "blocks", "categories", "day_plans", "earnings",
+                        "app_info", "app_usage", "blocks", "categories", "checklist_occurrences",
+                        "checklist_tasks", "completion_logs", "day_plans", "earnings", "habit_rules",
                         "hourly_usage", "learning", "limit_events", "notification_log",
                         "notification_rules", "settings", "template_items", "templates"
                     ),
@@ -244,12 +248,12 @@ class MigrationTest {
     }
 
     @Test
-    fun `migrated schema matches the v5 entity definitions exactly`() {
+    fun `migrated schema matches the v6 entity definitions exactly`() {
         val conn = connect()
         conn.use {
             createV1(it)
             DatabaseMigrations.statementsFrom(1).forEach { sql -> it.exec(sql) }
-            it.exec("PRAGMA user_version = 5")
+            it.exec("PRAGMA user_version = 6")
 
             // Expectations mirror the current entities: TEXT/INTEGER, nullability
             // and primary-key position. Any drift fails this test.
@@ -277,7 +281,22 @@ class MigrationTest {
                 "earnings" to listOf("id|INTEGER|1|1", "dateKey|TEXT|1|0", "source|TEXT|1|0", "taskType|TEXT|1|0",
                     "appId|TEXT|0|0", "amountPaise|INTEGER|1|0", "loggedAt|INTEGER|1|0", "attributedMinutes|INTEGER|1|0"),
                 "learning" to listOf("id|INTEGER|1|1", "dateKey|TEXT|1|0", "minutes|INTEGER|1|0", "text|TEXT|1|0",
-                    "createdAt|INTEGER|1|0")
+                    "createdAt|INTEGER|1|0"),
+                // Phase 8 — checklist core (v5 → v6).
+                "habit_rules" to listOf("id|TEXT|1|1", "title|TEXT|1|0", "domain|TEXT|1|0",
+                    "cadence|TEXT|1|0", "weekdays|TEXT|1|0", "windowStartMin|INTEGER|0|0",
+                    "windowEndMin|INTEGER|0|0", "weeklyTarget|INTEGER|0|0", "minimumLabel|TEXT|0|0",
+                    "paused|INTEGER|1|0", "archived|INTEGER|1|0", "createdAt|INTEGER|1|0"),
+                "checklist_tasks" to listOf("id|TEXT|1|1", "title|TEXT|1|0", "domain|TEXT|1|0",
+                    "dueDate|TEXT|1|0", "dueTimeMin|INTEGER|0|0", "archived|INTEGER|1|0",
+                    "createdAt|INTEGER|1|0"),
+                "checklist_occurrences" to listOf("id|TEXT|1|1", "dateKey|TEXT|1|0", "kind|TEXT|1|0",
+                    "sourceId|TEXT|1|0", "title|TEXT|1|0", "domain|TEXT|1|0", "windowStartMin|INTEGER|0|0",
+                    "windowEndMin|INTEGER|0|0", "minimumLabel|TEXT|0|0", "status|TEXT|1|0",
+                    "snoozeUntil|INTEGER|0|0", "generatedAt|INTEGER|1|0", "updatedAt|INTEGER|1|0"),
+                "completion_logs" to listOf("id|INTEGER|1|1", "occurrenceId|TEXT|1|0", "dateKey|TEXT|1|0",
+                    "action|TEXT|1|0", "fromStatus|TEXT|1|0", "toStatus|TEXT|1|0", "minutes|INTEGER|0|0",
+                    "quantity|INTEGER|0|0", "topic|TEXT|1|0", "note|TEXT|1|0", "at|INTEGER|1|0")
             )
 
             // Report every difference in one go: a single CI run then shows the
@@ -293,7 +312,7 @@ class MigrationTest {
             if (actualTables != expected.keys) {
                 problems.add("tables\n  expected: ${expected.keys.sorted()}\n  actual:   ${actualTables.sorted()}")
             }
-            assertTrue("schema drift from the v5 entities:\n" + problems.joinToString("\n"), problems.isEmpty())
+            assertTrue("schema drift from the v6 entities:\n" + problems.joinToString("\n"), problems.isEmpty())
         }
     }
 

@@ -17,11 +17,11 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  */
 object DatabaseMigrations {
 
-    /** Current database version. Phase 7 does NOT bump this. */
-    const val CURRENT_VERSION = 5
+    /** Current database version. Phase 8 adds the checklist tables (v5 → v6). */
+    const val CURRENT_VERSION = 6
 
     /** Every version this build can open. A version outside this set fails. */
-    val SUPPORTED_VERSIONS: List<Int> = listOf(1, 2, 3, 4, 5)
+    val SUPPORTED_VERSIONS: List<Int> = listOf(1, 2, 3, 4, 5, 6)
 
     /**
      * v1 → v2 (Phase 2): notifications. Adds `settings`, `notification_rules`,
@@ -74,12 +74,46 @@ object DatabaseMigrations {
             "`createdAt` INTEGER NOT NULL)"
     )
 
-    /** Ordered steps, used by the tests to replay 1 → 5 statement by statement. */
+    /**
+     * v5 → v6 (Phase 8): checklist core. Adds `habit_rules`, `checklist_tasks`,
+     * `checklist_occurrences`, `completion_logs`.
+     *
+     * Pure addition, like every step before it — no existing row is rewritten. The
+     * occurrence primary key is derived from (kind, source, date), so regenerating a date
+     * cannot duplicate a row. `NOT NULL` columns carry SQL defaults so that a v5 backup
+     * (which has no checklist tables at all) still restores into this schema.
+     */
+    val V5_TO_V6: List<String> = listOf(
+        "CREATE TABLE IF NOT EXISTS `habit_rules` (`id` TEXT NOT NULL, `title` TEXT NOT NULL, " +
+            "`domain` TEXT NOT NULL, `cadence` TEXT NOT NULL, `weekdays` TEXT NOT NULL, " +
+            "`windowStartMin` INTEGER, `windowEndMin` INTEGER, `weeklyTarget` INTEGER, " +
+            "`minimumLabel` TEXT, `paused` INTEGER NOT NULL, `archived` INTEGER NOT NULL, " +
+            "`createdAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "CREATE TABLE IF NOT EXISTS `checklist_tasks` (`id` TEXT NOT NULL, `title` TEXT NOT NULL, " +
+            "`domain` TEXT NOT NULL, `dueDate` TEXT NOT NULL, `dueTimeMin` INTEGER, " +
+            "`archived` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "CREATE TABLE IF NOT EXISTS `checklist_occurrences` (`id` TEXT NOT NULL, `dateKey` TEXT NOT NULL, " +
+            "`kind` TEXT NOT NULL, `sourceId` TEXT NOT NULL, `title` TEXT NOT NULL, `domain` TEXT NOT NULL, " +
+            "`windowStartMin` INTEGER, `windowEndMin` INTEGER, `minimumLabel` TEXT, `status` TEXT NOT NULL, " +
+            "`snoozeUntil` INTEGER, `generatedAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, " +
+            "PRIMARY KEY(`id`))",
+        "CREATE INDEX IF NOT EXISTS `index_checklist_occurrences_dateKey` " +
+            "ON `checklist_occurrences` (`dateKey`)",
+        "CREATE TABLE IF NOT EXISTS `completion_logs` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+            "`occurrenceId` TEXT NOT NULL, `dateKey` TEXT NOT NULL, `action` TEXT NOT NULL, " +
+            "`fromStatus` TEXT NOT NULL, `toStatus` TEXT NOT NULL, `minutes` INTEGER, `quantity` INTEGER, " +
+            "`topic` TEXT NOT NULL, `note` TEXT NOT NULL, `at` INTEGER NOT NULL)",
+        "CREATE INDEX IF NOT EXISTS `index_completion_logs_occurrenceId` " +
+            "ON `completion_logs` (`occurrenceId`)"
+    )
+
+    /** Ordered steps, used by the tests to replay 1 → 6 statement by statement. */
     val STEPS: List<Step> = listOf(
         Step(1, 2, V1_TO_V2),
         Step(2, 3, V2_TO_V3),
         Step(3, 4, V3_TO_V4),
-        Step(4, 5, V4_TO_V5)
+        Step(4, 5, V4_TO_V5),
+        Step(5, 6, V5_TO_V6)
     )
 
     data class Step(val from: Int, val to: Int, val statements: List<String>)

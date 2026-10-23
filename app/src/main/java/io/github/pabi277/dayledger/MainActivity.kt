@@ -62,6 +62,7 @@ import io.github.pabi277.dayledger.ui.SettingsScreen
 import io.github.pabi277.dayledger.ui.WeeklyReportScreen
 import io.github.pabi277.dayledger.ui.NotificationsScreen
 import io.github.pabi277.dayledger.ui.PlanningScreen
+import io.github.pabi277.dayledger.ui.HabitsScreen
 import io.github.pabi277.dayledger.ui.TodayScreen
 
 class MainActivity : ComponentActivity() {
@@ -87,6 +88,8 @@ fun DayLedgerApp() {
     val earningsVm: EarningsViewModel = viewModel()
     val learningVm: LearningViewModel = viewModel()
     val weeklyVm: WeeklyReportViewModel = viewModel()
+    val checklistVm: ChecklistViewModel = viewModel()
+    val habitsVm: HabitsViewModel = viewModel()
     val state by todayVm.state.collectAsState()
     val catState by categoryVm.state.collectAsState()
     val notifState by notificationVm.state.collectAsState()
@@ -95,8 +98,14 @@ fun DayLedgerApp() {
     val earningsState by earningsVm.state.collectAsState()
     val learningState by learningVm.state.collectAsState()
     val weeklyState by weeklyVm.state.collectAsState()
+    val checklistState by checklistVm.state.collectAsState()
+    val habitsState by habitsVm.state.collectAsState()
 
     var screen by remember { mutableStateOf(if (state.hasUsagePermission) "today" else "onboarding") }
+
+    // Phase 8: the checklist front door owns the first screen. Generation runs on every
+    // start; the ids are deterministic, so a restart or reboot adds no duplicates.
+    LaunchedEffect(Unit) { checklistVm.load() }
 
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
@@ -210,11 +219,14 @@ fun DayLedgerApp() {
         return
     }
 
+    // UI Design v2 primary navigation: Today · Plan · Habits · Review · More.
+    // Usage, Earn, Learn, Limits, Categories, Notifications and Settings remain reachable
+    // from More; nothing is stranded.
     val tabs = listOf(
         "today" to ("Today" to Icons.Default.Home),
         "plan" to ("Plan" to Icons.Default.List),
-        "limits" to ("Limits" to Icons.Default.Lock),
-        "earnings" to ("Earn" to Icons.Default.TrendingUp),
+        "habits" to ("Habits" to Icons.Default.Notifications),
+        "review" to ("Review" to Icons.Default.TrendingUp),
         "more" to ("More" to Icons.Default.MoreHoriz)
     )
     Scaffold(
@@ -235,7 +247,20 @@ fun DayLedgerApp() {
     ) { padding ->
         androidx.compose.foundation.layout.Box(modifier = androidx.compose.ui.Modifier.padding(padding)) {
         when (screen) {
-            "today" -> TodayScreen(state = state, onRefresh = { todayVm.refresh() })
+            "today" -> TodayScreen(
+                checklist = checklistState,
+                usage = state,
+                checklistVm = checklistVm,
+                onRefreshUsage = { todayVm.refresh() }
+            )
+            "habits" -> {
+                HabitsScreen(state = habitsState, viewModel = habitsVm)
+                LaunchedEffect(Unit) { habitsVm.load() }
+            }
+            "review" -> {
+                WeeklyReportScreen(state = weeklyState)
+                LaunchedEffect(Unit) { weeklyVm.load() }
+            }
             "categories" -> {
                 CategoriesScreen(state = catState, viewModel = categoryVm)
                 LaunchedEffect(Unit) { categoryVm.load() }
@@ -261,7 +286,16 @@ fun DayLedgerApp() {
             }
             "more" -> MoreScreen(
                 onOpen = { screen = it },
-                items = listOf("categories" to "Categories", "notifications" to "Notifications", "learning" to "Learning", "report" to "Report", "settings" to "Settings", "tomorrow" to "Tomorrow")
+                items = listOf(
+                    "limits" to "Limits",
+                    "earnings" to "Earn",
+                    "learning" to "Learn",
+                    "categories" to "Categories",
+                    "notifications" to "Notifications",
+                    "tomorrow" to "Tomorrow",
+                    "report" to "Weekly report",
+                    "settings" to "Settings"
+                )
             )
             "settings" -> SettingsScreen(
                 onExportCsv = { exportLauncher.launch("dayledger.csv") },

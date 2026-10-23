@@ -27,7 +27,7 @@ class DayLedgerWidget : GlanceAppWidget() {
         provideContent {
             GlanceTheme {
                 Column {
-                    Text("Day Ledger")
+                    Text("Daily Logger")
                     Text("Total: ${total / 60}h ${total % 60}m")
                     Text("Top waste: $topWasteLabel")
                     Text("as of $asOf")
