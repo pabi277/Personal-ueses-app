@@ -23,6 +23,7 @@ data class ChecklistUiState(
     val remaining: Int = 0,
     val fullCount: Int = 0,
     val minimumCount: Int = 0,
+    val skippedCount: Int = 0,
     /** The row whose optional-detail sheet is open, if any. */
     val evidenceFor: String? = null,
     /** The occurrence most recently acted on, so its row can offer Undo. */
@@ -69,6 +70,7 @@ class ChecklistViewModel(app: Application) : AndroidViewModel(app) {
                 remaining = TodayBuckets.remaining(rows),
                 fullCount = full,
                 minimumCount = minimum,
+                skippedCount = TodayBuckets.skippedCount(rows),
                 isLoading = false
             )
         } catch (e: Exception) {

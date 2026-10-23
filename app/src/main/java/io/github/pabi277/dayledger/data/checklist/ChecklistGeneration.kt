@@ -125,7 +125,7 @@ object ChecklistGeneration {
 }
 
 /** Where a row belongs on the Today screen. */
-enum class TodaySection { OVERDUE, NOW, NEXT, DUE_TODAY, ANYTIME, COMPLETED }
+enum class TodaySection { OVERDUE, NOW, NEXT, DUE_TODAY, ANYTIME, COMPLETED, SKIPPED }
 
 /** Minimal view of an occurrence the bucketing needs. */
 data class TodayRow(
@@ -151,7 +151,10 @@ object TodayBuckets {
      */
     fun bucket(rows: List<TodayRow>, nowMinuteOfDay: Int, nowMillis: Long): List<TodayItem> {
         val open = rows.filterNot { ChecklistValues.isClosed(it.status) }
-        val closed = rows.filter { ChecklistValues.isClosed(it.status) }
+        // "Done" must not hold a row whose own label reads "Skipped, not done":
+        // DL7 says Skip is not a completion, so it gets its own group.
+        val completed = rows.filter { ChecklistValues.isCompleted(it.status) }
+        val skipped = rows.filter { it.status == ChecklistValues.STATUS_SKIPPED }
         val snoozed = open.filter { it.snoozeUntil != null && it.snoozeUntil > nowMillis }
         val live = open.filterNot { it in snoozed }
 
@@ -175,12 +178,16 @@ object TodayBuckets {
             addAll(next.map { TodayItem(it, TodaySection.NEXT) })
             addAll(dueToday.sortedBy { it.windowStartMin }.map { TodayItem(it, TodaySection.DUE_TODAY) })
             addAll(anytime.map { TodayItem(it, TodaySection.ANYTIME) })
-            addAll(closed.sortedBy { it.title.lowercase() }.map { TodayItem(it, TodaySection.COMPLETED) })
+            addAll(completed.sortedBy { it.title.lowercase() }.map { TodayItem(it, TodaySection.COMPLETED) })
+            addAll(skipped.sortedBy { it.title.lowercase() }.map { TodayItem(it, TodaySection.SKIPPED) })
         }
     }
 
     /** Core remaining = open items. Deliberately not capped at three. */
     fun remaining(rows: List<TodayRow>): Int = rows.count { !ChecklistValues.isClosed(it.status) }
+
+    fun skippedCount(rows: List<TodayRow>): Int =
+        rows.count { it.status == ChecklistValues.STATUS_SKIPPED }
 
     fun completedCounts(rows: List<TodayRow>): Pair<Int, Int> =
         rows.count { it.status == ChecklistValues.STATUS_FULL } to

@@ -268,7 +268,7 @@ class ChecklistGenerationTest {
     }
 
     @Test
-    fun `settled items collapse into Completed and the counters separate Full and Minimum`() {
+    fun `settled items collapse, and the counters separate Full, Minimum and Skipped`() {
         val rows = listOf(
             row("a", status = ChecklistValues.STATUS_FULL),
             row("b", status = ChecklistValues.STATUS_MINIMUM),
@@ -278,9 +278,23 @@ class ChecklistGenerationTest {
         val items = TodayBuckets.bucket(rows, 10 * 60, nowMillis = 0)
         assertEquals(TodaySection.COMPLETED, sectionOf(items, "a"))
         assertEquals(TodaySection.COMPLETED, sectionOf(items, "b"))
-        assertEquals(TodaySection.COMPLETED, sectionOf(items, "c"))
         assertEquals(1, TodayBuckets.remaining(rows))
         assertEquals(1 to 1, TodayBuckets.completedCounts(rows))
+        assertEquals(1, TodayBuckets.skippedCount(rows))
+    }
+
+    @Test
+    fun `a skipped item never appears under Done`() {
+        // Owner device check 2026-10-23: the Done header held a row labelled
+        // "Skipped, not done". DL7 says Skip is not a completion, so it gets its own group.
+        val rows = listOf(
+            row("done", status = ChecklistValues.STATUS_FULL),
+            row("skipped", status = ChecklistValues.STATUS_SKIPPED)
+        )
+        val items = TodayBuckets.bucket(rows, 10 * 60, nowMillis = 0)
+        assertEquals(TodaySection.COMPLETED, sectionOf(items, "done"))
+        assertEquals(TodaySection.SKIPPED, sectionOf(items, "skipped"))
+        assertEquals(1, items.count { it.section == TodaySection.COMPLETED })
     }
 
     @Test

@@ -61,6 +61,7 @@ private fun sectionTitle(section: TodaySection): String = when (section) {
     TodaySection.DUE_TODAY -> "Due today"
     TodaySection.ANYTIME -> "Anytime"
     TodaySection.COMPLETED -> "Done"
+    TodaySection.SKIPPED -> "Skipped"
 }
 
 /**
@@ -107,6 +108,7 @@ fun TodayScreen(
                     append(if (checklist.remaining == 0) "Nothing left today" else "${checklist.remaining} left")
                     if (checklist.fullCount > 0) append(" · ${checklist.fullCount} full")
                     if (checklist.minimumCount > 0) append(" · ${checklist.minimumCount} minimum")
+                    if (checklist.skippedCount > 0) append(" · ${checklist.skippedCount} skipped")
                 }
                 Text(
                     text = summary,
