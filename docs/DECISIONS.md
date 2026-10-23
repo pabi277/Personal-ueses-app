@@ -350,6 +350,26 @@
   category budget takes over. This keeps the column's old default (`0`) meaning what it
   has always meant for every row already on the owner's phone.
 
+## Agent decisions inside Phase 10 (2026-10-23) — correctable, not owner answers
+
+Phase 10's contract was fixed by the owner's earlier reminder-defaults answer. Four small
+choices had to be made to implement it; they are recorded here so they can be corrected
+rather than discovered.
+
+- **Quiet hours default to 22:00–07:00**, editable and switchable off by setting both ends
+  equal. The requirement makes quiet hours mandatory but names no default, and shipping
+  "no quiet hours" would mean the first night with the app can buzz the owner awake.
+- **Daily caps default to 6 Core and 6 general.** The requirement makes them mandatory and
+  separate but names no number; 6 matches the existing R12 usage cap so the app does not
+  hold two different ideas of "enough for one day".
+- **A new item starts as Standard.** Core is never assumed — it is chosen per item on the
+  Reminders screen. Starting everything at Core would fire twenty-minute reminders at an
+  owner who has not yet said which items are core.
+- **`Later` is the only action that keeps a reminder alive** (it is a snooze); Done, Minimum
+  and Skip cancel the remaining fires. Reschedule was left in the app rather than the
+  notification, because Android shows four action slots well and all four are taken by the
+  actions the requirements name explicitly.
+
 ## Open (current owner gates)
 
 - The 2026-10-15 decision batches and the 2026-10-22 product/delivery gate answers

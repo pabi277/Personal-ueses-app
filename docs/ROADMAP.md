@@ -257,6 +257,25 @@ explicit next action rather than silently rolling forever.
 
 ### Phase 10 — Persistent reminder engine
 
+> 🚧 **Status: implemented 2026-10-23, CI green, awaiting the owner's device check.**
+> Schema v8 adds `reminder_states` (one row per dated occurrence: profile, next fire,
+> audible count, degradation reason) and the append-only `reminder_events`, so the schedule
+> survives a reboot instead of living only in an `AlarmManager` entry. `ReminderRules` is
+> pure and holds every decision: Core 20 min / 4 audible, Standard initial + one repeat at
+> 50 min, Flexible once, quiet hours that wrap midnight, separate Core and general daily
+> caps, Pause and snooze that preserve due state, and — the rule that matters most — a
+> missed backlog becomes **one** late fire, never a burst. Actions Done/Minimum/Later/Skip
+> route through the same repository as the Today screen, so a tap on a notification and a
+> tap on the row write the same log; a stale tap records a `stale` event and nothing else.
+> Scheduling is rebuildable: `BootReceiver` now rebuilds on boot, `TIME_SET`,
+> `TIMEZONE_CHANGED` and `MY_PACKAGE_REPLACED` from persisted state. When Android refuses an
+> exact alarm the reminder still fires inexactly, and the Reminders screen says the timing is
+> approximate rather than pretending. Run `5f61bc2` is green on **147** tests (28 rule
+> tests + 6 SQL tests new), `app-progress-apk` 18,688,002 B, signer unchanged.
+> **Not Done yet:** "survives reboot and creates exactly one log" is device evidence, and
+> none has been reported. Seven checks are listed in
+> [`docs/phases/10-reminder-engine.md`](phases/10-reminder-engine.md) §8.
+
 **Parts**
 
 - **10.1 — Profiles/state machine:** per-item/domain/global cadence, repeat state,

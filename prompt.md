@@ -240,7 +240,19 @@
    fresh gate: it lists *every* test under "failing unit tests" rather than the failed ones,
    it filed an empty report (#16), and it refiles the same signature on every push with no
    close-on-green.
-8. End each implementation phase with CI green and its `app-progress-apk`; the
+8. **Phase 10 (persistent reminder engine) is 🚧 implemented (2026-10-23), not Done.**
+   Schema v8 adds `reminder_states` + `reminder_events`, so reminder state is per dated
+   occurrence and survives a reboot instead of living in an `AlarmManager` entry.
+   `ReminderRules` (pure) owns cadence, quiet hours, pause, caps and the no-burst rule;
+   `ReminderScheduler` is the only `AlarmManager` caller and is rebuilt from state on boot,
+   `TIME_SET`, `TIMEZONE_CHANGED` and `MY_PACKAGE_REPLACED`; actions Done/Minimum/Later/Skip
+   reuse `ChecklistRepository.act`, with a stale tap recorded and ignored. Run `5f61bc2`
+   is green on **147** tests and `app-progress-apk` is 18,688,002 B with the same signer.
+   **The device check is owed** — seven checks in `docs/phases/10-reminder-engine.md` §8,
+   of which reboot survival and "exactly one log" cannot be proven by CI at all. The MVP
+   gate (14 real days of use) starts after Phase 10 is accepted, and its measurable
+   criteria must be agreed before it starts.
+9. End each implementation phase with CI green and its `app-progress-apk`; the
    owner installs it and records a short smoke check plus the phase-specific
    evidence in the phase record. Update roadmap/prompt and stop at the merge gate.
    No PR or merge without an explicit command.

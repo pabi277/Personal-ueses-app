@@ -33,6 +33,13 @@ The agent's sandbox still cannot download Actions artifacts (302 to
 `productionresultssa8.blob.core.windows.net`, unreachable), so any future schema version
 needs the same one-time owner download.
 
+## Outstanding: `8.json`
+
+Schema v8 (Phase 10) added `reminder_states` and `reminder_events`, so the canonical export
+is now `8.json`. It is **not committed yet**: the artifact download still fails in the agent
+sandbox (`room-schema` from run `5f61bc2`, 6,413 B, contains both files). One download from
+the owner closes it, exactly as it did for `7.json`.
+
 ## Rules for this directory
 
 - One file per schema version, named `<version>.json`, never edited after the version
