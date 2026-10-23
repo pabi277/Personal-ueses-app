@@ -11,6 +11,8 @@ import io.github.pabi277.dayledger.data.checklist.ChecklistTaskEntity
 import io.github.pabi277.dayledger.data.checklist.CompletionLogDao
 import io.github.pabi277.dayledger.data.checklist.CompletionLogEntity
 import io.github.pabi277.dayledger.data.checklist.HabitRuleDao
+import io.github.pabi277.dayledger.data.checklist.InboxDao
+import io.github.pabi277.dayledger.data.checklist.InboxItemEntity
 import io.github.pabi277.dayledger.data.checklist.HabitRuleEntity
 import io.github.pabi277.dayledger.data.migrations.DatabaseMigrations
 
@@ -33,7 +35,8 @@ import io.github.pabi277.dayledger.data.migrations.DatabaseMigrations
         HabitRuleEntity::class,
         ChecklistTaskEntity::class,
         ChecklistOccurrenceEntity::class,
-        CompletionLogEntity::class
+        CompletionLogEntity::class,
+        InboxItemEntity::class
     ],
     version = DatabaseMigrations.CURRENT_VERSION,
     exportSchema = true
@@ -43,6 +46,7 @@ abstract class DayLedgerDatabase : RoomDatabase() {
     abstract fun checklistTaskDao(): ChecklistTaskDao
     abstract fun checklistOccurrenceDao(): ChecklistOccurrenceDao
     abstract fun completionLogDao(): CompletionLogDao
+    abstract fun inboxDao(): InboxDao
     abstract fun usageDao(): AppUsageDao
     abstract fun hourlyDao(): HourlyUsageDao
     abstract fun appInfoDao(): AppInfoDao

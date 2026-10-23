@@ -153,12 +153,12 @@ class MigrationTest {
     @Test
     fun `every step exists with the expected start and end versions`() {
         assertEquals(
-            listOf(1 to 2, 2 to 3, 3 to 4, 4 to 5, 5 to 6),
+            listOf(1 to 2, 2 to 3, 3 to 4, 4 to 5, 5 to 6, 6 to 7),
             DatabaseMigrations.STEPS.map { it.from to it.to }
         )
-        assertEquals(5, DatabaseMigrations.ALL.size)
-        assertEquals(6, DatabaseMigrations.CURRENT_VERSION)
-        assertEquals(listOf(1, 2, 3, 4, 5, 6), DatabaseMigrations.SUPPORTED_VERSIONS)
+        assertEquals(6, DatabaseMigrations.ALL.size)
+        assertEquals(7, DatabaseMigrations.CURRENT_VERSION)
+        assertEquals(listOf(1, 2, 3, 4, 5, 6, 7), DatabaseMigrations.SUPPORTED_VERSIONS)
     }
 
     @Test
@@ -207,7 +207,7 @@ class MigrationTest {
     }
 
     @Test
-    fun `every supported start version reaches v6 with all its rows intact`() {
+    fun `every supported start version reaches v7 with all its rows intact`() {
         for (start in DatabaseMigrations.SUPPORTED_VERSIONS) {
             val conn = connect()
             conn.use {
@@ -218,7 +218,7 @@ class MigrationTest {
                     2 -> DatabaseMigrations.V1_TO_V2.forEach { sql -> it.exec(sql) }
                     3 -> DatabaseMigrations.statementsFrom(1).forEach { sql -> it.exec(sql) }
                     4 -> DatabaseMigrations.statementsFrom(1).forEach { sql -> it.exec(sql) }
-                    5, 6 -> DatabaseMigrations.statementsFrom(1).forEach { sql -> it.exec(sql) }
+                    5, 6, 7 -> DatabaseMigrations.statementsFrom(1).forEach { sql -> it.exec(sql) }
                 }
                 seedThrough(it, start)
 
@@ -227,16 +227,17 @@ class MigrationTest {
 
                 val remaining = DatabaseMigrations.statementsFrom(start)
                 remaining.forEach { sql -> it.exec(sql) }
-                it.exec("PRAGMA user_version = 6")
+                it.exec("PRAGMA user_version = 7")
 
-                assertEquals("start v$start: user_version", 6, it.readUserVersion())
+                assertEquals("start v$start: user_version", 7, it.readUserVersion())
                 assertEquals(
                     "start v$start: table set",
                     setOf(
                         "app_info", "app_usage", "blocks", "categories", "checklist_occurrences",
                         "checklist_tasks", "completion_logs", "day_plans", "earnings", "habit_rules",
-                        "hourly_usage", "learning", "limit_events", "notification_log",
-                        "notification_rules", "settings", "template_items", "templates"
+                        "hourly_usage", "inbox_items", "learning", "limit_events",
+                        "notification_log", "notification_rules", "settings", "template_items",
+                        "templates"
                     ),
                     it.tableNames().toSet()
                 )
@@ -248,12 +249,12 @@ class MigrationTest {
     }
 
     @Test
-    fun `migrated schema matches the v6 entity definitions exactly`() {
+    fun `migrated schema matches the v7 entity definitions exactly`() {
         val conn = connect()
         conn.use {
             createV1(it)
             DatabaseMigrations.statementsFrom(1).forEach { sql -> it.exec(sql) }
-            it.exec("PRAGMA user_version = 6")
+            it.exec("PRAGMA user_version = 7")
 
             // Expectations mirror the current entities: TEXT/INTEGER, nullability
             // and primary-key position. Any drift fails this test.
@@ -296,7 +297,10 @@ class MigrationTest {
                     "snoozeUntil|INTEGER|0|0", "generatedAt|INTEGER|1|0", "updatedAt|INTEGER|1|0"),
                 "completion_logs" to listOf("id|INTEGER|1|1", "occurrenceId|TEXT|1|0", "dateKey|TEXT|1|0",
                     "action|TEXT|1|0", "fromStatus|TEXT|1|0", "toStatus|TEXT|1|0", "minutes|INTEGER|0|0",
-                    "quantity|INTEGER|0|0", "topic|TEXT|1|0", "note|TEXT|1|0", "at|INTEGER|1|0")
+                    "quantity|INTEGER|0|0", "topic|TEXT|1|0", "note|TEXT|1|0", "at|INTEGER|1|0"),
+                // Phase 9 — title-first capture (v6 → v7).
+                "inbox_items" to listOf("id|TEXT|1|1", "title|TEXT|1|0", "domain|TEXT|1|0",
+                    "note|TEXT|1|0", "createdAt|INTEGER|1|0")
             )
 
             // Report every difference in one go: a single CI run then shows the
@@ -312,7 +316,7 @@ class MigrationTest {
             if (actualTables != expected.keys) {
                 problems.add("tables\n  expected: ${expected.keys.sorted()}\n  actual:   ${actualTables.sorted()}")
             }
-            assertTrue("schema drift from the v6 entities:\n" + problems.joinToString("\n"), problems.isEmpty())
+            assertTrue("schema drift from the v7 entities:\n" + problems.joinToString("\n"), problems.isEmpty())
         }
     }
 

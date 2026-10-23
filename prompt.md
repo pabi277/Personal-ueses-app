@@ -186,8 +186,8 @@
    update-over-install of a later owner-keyed APK, and a restore corroborated by his own
    exports (seven historical days identical after clear-data; six configuration tables
    row-for-row identical). Per-app categories were silently discarded before the fix (the
-   UPDATE matched zero rows), so they need one re-entry on device; per-app `limitMin` has
-   no write path at all, a Phase 4 scope question for the P0/Phase 8 conversation. Also
+   UPDATE matched zero rows), so they need one re-entry on device; per-app `limitMin` had
+   no write path at all at that point — that is now F2, built 2026-10-23 (item 5 below). Also
    fixed in this
    phase: `app_info` had been empty since Phase 1 because `INSERT OR IGNORE` silently
    dropped every row that omitted the NOT NULL `alwaysAllowed` column (found from the
@@ -204,7 +204,43 @@
    guard that hardcoded `5.json` was fixed under the owner's gate answer. Run `39913142388` is green (88 tests, `app-progress-apk` 18,519,606 B), the owner's
    device smoke check reports every clause passing, and four defects it caught are fixed.
    Record: `docs/phases/08-checklist-core.md`.
-4. End each implementation phase with CI green and its `app-progress-apk`; the
+4. **Phase 9 (Capture, deadlines and carryover) is ✅ Done (2026-10-23).** Schema v7 adds
+   `inbox_items`; captures are title-first and land in the Inbox with an Undo instead of
+   inventing a deadline. Day close requires one explicit decision per leftover (Move,
+   Schedule, Shrink to Minimum, Drop) and never rolls an item silently; carried ids are
+   deterministic so a retried rollover cannot duplicate. Top 3 is per date and Plan now
+   renders the date's checklist items. Run `39915691906` is green (102 tests) and the
+   owner's device smoke check reports all six checks passing. **Merged to `main` in PR #26
+   (2026-10-23)**, together with F2 and F3 below. Record:
+   `docs/phases/09-capture-deadlines-carryover.md`.
+5. **F2 (per-app limits) is ✅ built (2026-10-23).** The owner's rule — a per-app limit
+   overrides the category budget, which then applies only to apps with no explicit limit —
+   lives in one pure object, `LimitRules`, that both `BlockerAccessibilityService` and the
+   Limits screen call, so the number shown and the number enforced cannot differ.
+   `alwaysAllowed` and an active earning session still outrank every number (R16/DL24).
+   The Limits screen now has a per-app limit field; blank/0 means *no per-app limit*.
+   A reached limit writes one `limit_events` row per app per day with the effective limit
+   (previously a hardcoded `0`). No schema change. Run `39927123528` (commit `ffa6502`)
+   green on **113 tests** (11 new), `app-progress-apk` 18,599,302 B, signer unchanged.
+   **No device check has been reported** — the new field and the block-screen limit line
+   still need the owner's smoke check.
+6. **F3 is ✅ done (2026-10-23).** `app/schemas/io.github.pabi277.dayledger.data.DayLedgerDatabase/7.json`
+   is committed — the v7 export, `identityHash` `29eea1eeb853cfa0825788e7abb39bb9`, 19 tables,
+   downloaded by the owner from the `room-schema` artifact of run `39932190461` and verified
+   against `MigrationTest`'s expectation table before committing (19/19 tables, zero
+   differences, both indices, `autoGenerate` on the seven integer ids). Artifact downloads
+   still fail in the agent's sandbox, so the next schema bump needs one more owner download. Run `39933633831` (commit `77e6c2c`) is green with the file committed and 113 tests passing, so the export step tolerates a pre-populated `app/schemas`.
+7. **The 21 auto-filed `CI build failure` issues are ✅ closed (2026-10-23).** All described
+   failures that no longer reproduce; the per-issue mapping to the filing run and to the
+   green evidence is in `docs/ci-issue-triage.md`. The sandbox connection has no
+   `issues: write` (403 on comment/close), so the closure ran from a **one-shot workflow**
+   using the Actions token — owner-authorized, run `39934460097` green, `still open: 0`,
+   and the workflow file was deleted in the next commit. **No open issues remain.** The
+   filer itself still has three defects, and fixing them is a workflow change that needs a
+   fresh gate: it lists *every* test under "failing unit tests" rather than the failed ones,
+   it filed an empty report (#16), and it refiles the same signature on every push with no
+   close-on-green.
+8. End each implementation phase with CI green and its `app-progress-apk`; the
    owner installs it and records a short smoke check plus the phase-specific
    evidence in the phase record. Update roadmap/prompt and stop at the merge gate.
    No PR or merge without an explicit command.

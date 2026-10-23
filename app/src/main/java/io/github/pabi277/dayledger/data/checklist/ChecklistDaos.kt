@@ -59,6 +59,24 @@ interface ChecklistOccurrenceDao {
 }
 
 @Dao
+interface InboxDao {
+    @Upsert
+    suspend fun upsert(item: InboxItemEntity)
+
+    @Query("SELECT * FROM inbox_items ORDER BY createdAt")
+    suspend fun all(): List<InboxItemEntity>
+
+    @Query("SELECT * FROM inbox_items WHERE id = :id")
+    suspend fun get(id: String): InboxItemEntity?
+
+    @Query("DELETE FROM inbox_items WHERE id = :id")
+    suspend fun delete(id: String)
+
+    @Query("SELECT COUNT(*) FROM inbox_items")
+    suspend fun count(): Int
+}
+
+@Dao
 interface CompletionLogDao {
     @Insert
     suspend fun append(log: CompletionLogEntity): Long
@@ -71,4 +89,11 @@ interface CompletionLogDao {
 
     @Query("SELECT * FROM completion_logs ORDER BY at DESC, id DESC LIMIT :limit")
     suspend fun recent(limit: Int): List<CompletionLogEntity>
+
+    /** Every carry/schedule decision, for the carryover counter. */
+    @Query("SELECT * FROM completion_logs WHERE action IN ('move', 'schedule') ORDER BY at")
+    suspend fun carryoverLogs(): List<CompletionLogEntity>
+
+    @Query("SELECT * FROM completion_logs WHERE occurrenceId = :occurrenceId AND action IN ('move', 'schedule')")
+    suspend fun carryoverLogsFor(occurrenceId: String): List<CompletionLogEntity>
 }
