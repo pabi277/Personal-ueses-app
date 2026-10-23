@@ -18,6 +18,17 @@ interface AppInfoDao {
     @Query("UPDATE app_info SET label = :label WHERE packageName = :packageName")
     suspend fun updateLabel(packageName: String, label: String)
 
+    /**
+     * Refresh a label that was stored as a stand-in. Rows created before the label fix
+     * carry the package name twice (`label == packageName`), which is why the owner's
+     * 2026-10-23 screenshot still showed `com.android.chrome` on the Today screen.
+     * Only placeholders are touched — a real label is never overwritten.
+     */
+    @Query(
+        "UPDATE app_info SET label = :label WHERE packageName = :packageName AND label = :packageName"
+    )
+    suspend fun updatePlaceholderLabel(packageName: String, label: String)
+
     @Query("UPDATE app_info SET category = :category WHERE packageName = :packageName")
     suspend fun updateCategory(packageName: String, category: String)
 

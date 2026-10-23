@@ -9,27 +9,38 @@ class PlanningRepository(private val context: Context) {
     private val dayPlanDao = db.dayPlanDao()
     private val templateDao = db.templateDao()
 
+    /**
+     * Seeds **empty** template placeholders.
+     *
+     * Before Phase 8 this seeded four templates *with blocks already filled in*
+     * ("College 08:00–16:00", "Offerwall 10:00–12:00", …). That is a routine guessed on the
+     * owner's behalf, which `docs/DECISIONS.md` and UI Design v2 §2 both forbid: never seed
+     * a personal timetable, and keep examples generic. The owner asked for this review on
+     * 2026-10-23 after seeing them on the Plan screen.
+     *
+     * Nothing is deleted here. Rows already on a device stay until the owner removes them,
+     * because deleting someone's plan on upgrade is not a decision an upgrade may make.
+     */
     suspend fun seedTemplatesIfNeeded() {
         if (templateDao.templates().isEmpty()) {
-            val templates = listOf(
-                TemplateEntity("college", "College day"),
-                TemplateEntity("study", "Study day"),
-                TemplateEntity("earning", "Earning day"),
-                TemplateEntity("off", "Off day")
-            )
-            templates.forEach { templateDao.upsertTemplate(it) }
-            // College day items
-            templateDao.upsertItem(TemplateItemEntity(templateId = "college", startMin = 8 * 60, endMin = 16 * 60, title = "College"))
-            templateDao.upsertItem(TemplateItemEntity(templateId = "college", startMin = 19 * 60, endMin = 20 * 60, title = "Study"))
-            // Study day
-            templateDao.upsertItem(TemplateItemEntity(templateId = "study", startMin = 9 * 60, endMin = 12 * 60, title = "Study"))
-            templateDao.upsertItem(TemplateItemEntity(templateId = "study", startMin = 14 * 60, endMin = 17 * 60, title = "Study"))
-            // Earning day
-            templateDao.upsertItem(TemplateItemEntity(templateId = "earning", startMin = 10 * 60, endMin = 12 * 60, title = "Offerwall"))
-            templateDao.upsertItem(TemplateItemEntity(templateId = "earning", startMin = 16 * 60, endMin = 18 * 60, title = "Offerwall"))
-            // Off day
-            templateDao.upsertItem(TemplateItemEntity(templateId = "off", startMin = 11 * 60, endMin = 12 * 60, title = "Light task"))
+            listOf(
+                TemplateEntity("tmpl-a", "Template A"),
+                TemplateEntity("tmpl-b", "Template B")
+            ).forEach { templateDao.upsertTemplate(it) }
         }
+    }
+
+    /** Item counts per template, for the Plan screen's template rows. */
+    suspend fun templateItemCounts(): Map<String, Int> =
+        templateDao.itemCounts().associate { it.templateId to it.itemCount }
+
+    /**
+     * Remove a template and its items. Only ever called from an explicit owner action on the
+     * Plan screen — an upgrade must not do this by itself.
+     */
+    suspend fun deleteTemplate(id: String) {
+        templateDao.deleteItems(id)
+        templateDao.deleteTemplate(id)
     }
 
     suspend fun templates() = templateDao.templates()

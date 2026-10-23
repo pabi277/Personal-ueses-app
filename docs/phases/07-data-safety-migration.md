@@ -1,8 +1,10 @@
 # Phase 07 — Data safety and migration foundation
 
-- Status: 🚧 **IN PROGRESS — parts 7.1–7.4 CI-verified, signing gate CLOSED by
-  evidence (2026-10-23), owner device evidence partly recorded** · Date: 2026-10-23 ·
-  Branch: `arena/0276c412-personal-ueses-app`
+- Status: ✅ **DONE (2026-10-23) — parts 7.1–7.5 CI-verified, signing gate closed by
+  evidence, owner device evidence recorded, and P0 passes on the owner's phone
+  (Today 2 h 47 m vs Digital Wellbeing 2 h 54 m; §9e)** · Date: 2026-10-23 ·
+  Branch: `arena/0276c412-personal-ueses-app` (phase work);
+  `arena/2105d3de-personal-ueses-app` (P0 re-measure and the measurement rebuild, §9d–§9e)
 - Base: `main` @ `8070713` (merge commit of PR #11)
 - Round 1 (evidence only) wrote no code. Round 2 wires the owner-approved signing
   identity (§8) — the one change the gate authorised — and **still writes no Phase 7
@@ -732,7 +734,207 @@ the restore:
 unimplemented rather than unpersisted. That is a Phase 4 scope question, outside this
 data-safety phase, and it belongs in the P0/Phase 8 conversation.
 
-## 10. How this phase becomes Done
+## 9d. Round 7 — P0 measured on the device: it fails, and the measurement is replaced (2026-10-23)
+
+### 9d.1 Owner-device evidence: the numbers disagree
+
+The owner installed the post-merge main build (`39902911376`, signed `533D76ED5C2E264779EE005C`)
+on the vivo 1820 and captured both screens in the same minute — `Digital Wellbeing`
+at 10:41:39 and `Day Ledger` at 10:41:48, so clock skew cannot explain anything below.
+
+| | Digital Wellbeing → Dashboard → Today | Day Ledger → Today | Δ |
+|---|---|---|---|
+| **Total** | **2 h 25 m** (145 min) | **4 h 46 m** (286 min) | **+141 min → +97 %** |
+| Top app | Chrome **57 m** | `com.android.chrome` **1 h 22 m** (82) | +25 min → **+44 %** |
+| 2nd | YouTube **29 m** | `com.whatsapp` **1 h 00 m** (60) | +31 min → **+253 %** |
+| 3rd | WhatsApp **17 m** | `com.google.android.youtube` **33 m** | +4 min → +13.8 % |
+| Remaining rows | 42 min across the rest | `com.termux` 31 · `com.deepseek.chat` 28 · `com.sec.android.app.launcher` 20 · `com.sec.android.app.sbrowser` 10 · `com.samsung.android.incallui` 8 | — |
+
+**Verdict: P0 fails.** The allowance is ~10 %; the total is ~9.7× outside it, and every
+comparable app is outside it — the closest, YouTube, is +13.8 %. The ranking even flips
+(Digital Wellbeing: Chrome > YouTube > WhatsApp; Day Ledger: Chrome > WhatsApp > YouTube).
+
+What *did* agree, and is worth stating because it locates the fault: **the top app's
+identity** (Chrome on both), the **`as of 10:41` stamp** against the OS capture, and the
+screen's own arithmetic — 3 h 46 Unclassified + 1 h 00 Life = 4 h 46, and the app rows sum
+to the displayed total. So the ingestion pipeline was working; the *definition of the
+number* was wrong. Per this phase's own record that is still a fail, and per
+`REQUIREMENTS.md` the decision rule is explicit: *"P0 fails → stop, fix the foundation,
+do not build on sand."*
+
+Also visible in the same screenshot: the app list still showed package names
+(`com.android.chrome`) even though `app_info` now holds 72 real labels (§9c.2). That was a
+display defect, not a data defect — `AppRow` rendered `u.packageName` and never read the
+label. Fixed in §9d.3.
+
+### 9d.2 Diagnosis: the app was measuring a diary, not screen time
+
+`UsageRepository.ingestDate` read `UsageStats.totalTimeInForeground` from
+`queryUsageStats(INTERVAL_DAILY, dayStart, now)`. Four compounding causes, ranked by size.
+The AOSP behaviour below was read from source at the time of diagnosis
+(`UsageStatsDatabase.queryUsageStats`, `UserUsageStatsService.rolloverStats`) rather than
+assumed.
+
+1. **`totalTimeInForeground` is not screen time.** It is a foreground *duration* that keeps
+   accumulating while the screen is off — foreground services, and on several OEM ROMs a
+   package that is simply left resumed. Nothing in the codebase touched
+   `totalTimeVisible`, `SCREEN_INTERACTIVE`, `SCREEN_NON_INTERACTIVE`, `KEYGUARD_SHOWN`,
+   `ACTIVITY_RESUMED` or `ACTIVITY_PAUSED`: there was **no clipping to screen-on state
+   anywhere**. This is the quantity Digital Wellbeing reports and Day Ledger did not.
+2. **The day range was never actually clipped.** `UsageStatsDatabase.queryUsageStats`
+   combines whole interval files whose `endTime` merely overlaps the request, and
+   `rolloverStats` splits the daily bucket at the rollover instant, not at midnight. So a
+   "today" query returns diary totals that may begin before midnight and, combined with
+   cause 1, keep growing past screen-off.
+3. **Sessions were closed at the query moment.** The hourly buckets and `longestSessionMin`
+   were built by closing every still-open session at `queryEnd`, crediting the entire idle
+   gap — and crediting the hour the session *opened*. The owner's hourly strip showed its
+   brightest bars in the early-morning hours, which is the signature of exactly that.
+4. **Launcher and dialer were counted as usage.** `com.sec.android.app.launcher` 20 m +
+   `com.samsung.android.incallui` 8 m = 28 min, about 19 % of Digital Wellbeing's whole 145,
+   and neither appears in Digital Wellbeing's list at all.
+
+Two structural problems followed from the same root: the hourly view was computed from a
+different measure (event sessions) than the total (stats), so the two could never
+reconcile and nothing asserted that they did; and because cause 3 depended on *when* you
+refreshed, the banked per-day figures (867/712/424/711/690/352/725 and the 22nd–23rd live
+increments) must not be read as measured screen time. They are what the old measurement
+produced.
+
+Ceiling check, so that the record does not overstate one cause: removing the 28 min of
+launcher and dialer still leaves 258 min against 145 — 1.78×. Causes 1 and 2 dominate, and
+WhatsApp's 60 m against 17 m is the cleanest single smoking gun.
+
+### 9d.3 What replaced it
+
+Owner decisions this round: fix the ingestion path now, exclude launcher/system UI/dialer
+from Today's total and app list, and record the failure here. Nothing else widened — no
+schema change, no database version bump, no new permission, no label change, no checklist
+work, no Phase 8.
+
+- **`data/ScreenTimeAggregator.kt` (new, pure).** Event-based, screen-on clipped, and free
+  of every `android.app.usage` type so it is unit-testable on the JVM. Rules: (1) time
+  accrues only while the screen is on — a `SCREEN_OFF` stops the clock even if the package
+  stays resumed, a later `SCREEN_ON` resumes it; (2) only for the package in front, never
+  for an excluded one; (3) nothing outside `[windowStart, windowEnd]`, so a diary entry
+  spanning midnight cannot leak a previous day's minutes; (4) an unknown screen state at the
+  window start counts **nothing** — under-reporting a boundary beats the four-hour
+  over-report it replaces; (5) minutes for the app rows and for the 24 hourly buckets are
+  allocated from **one running total**, so "the rows add up to the total" and "the bars add
+  up to the total" hold exactly rather than approximately.
+- **`data/SystemPackageRules.kt` (new).** Home screen, system UI and dialer are excluded by
+  known OEM package name *and* by the platform-resolved home package
+  (`PackageManager.resolveActivity` for `CATEGORY_HOME`) and default dialer
+  (`TelecomManager.defaultDialerPackage`) — a launcher can be a third-party app with any
+  package name. Deliberately **not** a suffix rule: `endsWith(".launcher")` would swallow a
+  third-party app. No new permission.
+- **Ingest is now a replace, not an accumulate.** Each day's rows are deleted and rewritten
+  inside one transaction. An upsert alone would never have corrected the inflated pre-fix
+  rows, nor removed the launcher and dialer rows.
+- **One read path.** Today, the widget and the weekly report all read through
+  `UsageRepository.screenUsageForDate`, so the total and the listed rows always agree and
+  the comparison against the OS is like for like. The raw DAO sum is kept but marked as
+  unfiltered.
+- **Labels.** `AppRow` now renders the label from `app_info` (falling back to the package
+  name), and ingest refreshes a label that was stored as a placeholder — only placeholders,
+  never a real label.
+
+### 9d.4 CI/test evidence (this is CI evidence, not device evidence)
+
+Run **`39906592546`** on commit **`3a7d15c`**, branch
+`arena/2105d3de-personal-ueses-app`, conclusion **success**:
+
+| Item | Result |
+|---|---|
+| `Unit tests, debug build, progress APK` | ✅ success |
+| `Signed release AAB and APK` | skipped — that job only runs on `main` (expected on a branch) |
+| Signer | ✅ `533D76ED5C2E264779EE005C…` — the ninth run on one certificate |
+| Artifacts | `app-progress-apk` 18,391,083 B · `signer-533D76ED5C2E264779EE005C` · `room-schema` 1,805 B |
+
+The unit-test step fails the build on any failing test, so the increase from 30 to **52
+tests** (22 new: 15 in `ScreenTimeAggregatorTest`, 7 in `SystemPackageRulesTest`, all with
+fictional package names and timestamps) is green. The count is taken from the tree: job log
+download is still blocked in the agent's environment (`EOF` from the blob host), so it is
+**not** quoted from the log.
+
+The Room schema export is unchanged in size, as expected: nothing in this round touches the
+schema, the version or the tables.
+
+### 9d.5 What is still owed
+
+1. **Re-run P0** with the `app-progress-apk` from run `39906592546`, installed over the
+   current build (another update-over-install datapoint). Open Day Ledger → Today →
+   Refresh, then Digital Wellbeing → Dashboard → Today, and report both pairs again.
+   The measurement is now screen-on foreground time with the same exclusions Digital
+   Wellbeing uses, so the expectation is agreement within ~10 %.
+2. **Expect older history to heal only partially.** Ingest rewrites the last 7 days, so a
+   single refresh corrects today and the previous six days. Days older than that still hold
+   the old inflated values; correcting them is a separate one-off decision, not part of P0.
+3. **Categories still need re-entry** (F2). The same screenshot shows every app
+   Unclassified and Life 1 h 00 m against a 120 m budget, which is expected until the owner
+   re-enters assignments once.
+
+Phase 7 therefore **stayed 🚧 at the end of this round**: every part (7.1–7.5) was
+implemented and CI-verified, but P0 was a *measured* failure rather than an open question,
+and it could only close when the owner's own two numbers agreed. They did, on the fixed
+build — see §9e.
+
+## 9e. Round 8 — the re-measure passes: Phase 7 closes (2026-10-23)
+
+### 9e.1 Owner-device evidence: P0 passes on the fixed build
+
+The owner installed the `app-progress-apk` from run `39906592546` (commit `3a7d15c`),
+opened Day Ledger → Today → Refresh, and captured both screens again:
+`Digital Wellbeing` at 11:10:36 and `Day Ledger` at 11:11:04 with an `as of 11:10` stamp,
+so the two readings are the same minute of the same day.
+
+| | Digital Wellbeing → Dashboard → Today | Day Ledger → Today | Δ | Within ~10 % |
+|---|---|---|---|---|
+| **Total** | **2 h 54 m** (174 min) | **2 h 47 m** (167 min) | −7 min → **−4.0 %** | ✅ |
+| Top app | Chrome **1 h 2 m** (62) | Chrome **57 m** | −5 min → **−8.1 %** | ✅ |
+| 2nd | YouTube **43 m** | YouTube **43 m** | 0 → **0.0 %** | ✅ |
+| 3rd | WhatsApp **17 m** | WhatsApp **17 m** (Life category) | 0 → **0.0 %** | ✅ |
+
+**P0 passes.** Total within 4.0 %, top app within 8.1 %, and the two lower-ranked apps
+agree exactly. Compare §9d.1: the same comparison was +97 % on the total and +44 % on the
+top app, with a ranking flip. Three other things in the same screenshot confirm the fix
+did what §9d.3 said it would:
+
+- **Launcher and dialer are gone.** `com.sec.android.app.launcher` (20 m) and
+  `com.samsung.android.incallui` (8 m) have disappeared from the list, which is the
+  28 minutes Digital Wellbeing never counted.
+- **Labels render.** The rows read `Chrome` and `YouTube`, not `com.android.chrome` —
+  the display defect noted at the end of §9d.1.
+- **The hourly strip is plausible.** Usage now clusters in the late-morning hours that
+  have actually happened rather than in the small hours, which was the signature of
+  sessions being force-closed at the query moment (§9d.2, cause 3).
+
+The residual error has a **direction**: Day Ledger now reads slightly *below* Digital
+Wellbeing (4 % on the total, 8 % on the top app). That is the conservative clipping from
+§9d.3 — an unknown screen state at a boundary counts nothing, and a session ends at
+`SCREEN_OFF` rather than being extended. Recording the direction matters for the next
+comparison: a reading that drifts *above* the OS would be a regression, a reading a few
+percent below is the expected shape.
+
+Category totals in the same screenshot are **not** part of P0 and should not be read as
+one: `Unclassified` still holds 2 h 29 m, because per-app assignments were wiped by the
+`app_info` defect and need one re-entry (F2). WhatsApp showing under `Life` 17 m is a real
+assignment that now persists — the write path the fix in §9c.3 restored.
+
+### 9e.2 Phase 7 status
+
+With P0 met, the roadmap's Done means for Phase 7 is satisfied on every clause: the
+supported v1–v4 → v5 upgrades are non-destructive and test-covered, the SAF backup/restore
+round trip is proven against the owner's own files, OS-backup exclusion is verified in the
+merged manifest, `app-progress-apk` is uploaded by every run, signing continuity has
+evidence from nine runs on one certificate, and P0 passes on the owner's phone.
+
+**Phase 7 is ✅ Done (2026-10-23).** Phase 8 has **not** started: no checklist model, no
+schema change, no database version bump, and the visible label is still Day Ledger. The
+follow-up queue (F1–F3) was unblocked by this closure; F1 is next unless the owner says
+otherwise.
+
+## 10. How this phase becomes Done — ✅ met on 2026-10-23
 
 Two evidence lines, kept separate so CI evidence and owner evidence can never be
 confused.
@@ -749,9 +951,14 @@ one owner-keyed signer `533D76ED5C2E264779EE005C…`.
 ✅ **restore corroborated by the owner's own files** — seven historical days return
 identical after clear-data, and six configuration tables return row-for-row identical
 (§9c.1) · ✅ the `app_info` fix verified on device, 0 → 72 labels (§9c.2).
-⬜ the **P0 number comparison** (Today's total and top app vs Digital Wellbeing) that the
-roadmap's Done means requires before Phase 8, and ⬜ pasting the on-screen status line
-(`Restore complete: … rows …`) if a quotable string is wanted.
+❌ the **P0 number comparison first failed** — Today 4 h 46 m against Digital Wellbeing's
+2 h 25 m at the same minute (§9d.1) — and then ✅ **passed on the re-measure** with the
+fixed measurement (§9e.1): Today 2 h 47 m against 2 h 54 m (−4.0 %) and the top app Chrome
+57 m against 1 h 2 m (−8.1 %), both inside the ~10 % the kill test allows. The failure is
+kept in this record rather than deleted, because it is what forced the measurement to be
+right. ⬜ the on-screen status line (`Restore complete: … rows …`) is still unpasted; it is
+a nicety, not a Done-means clause, and its absence does not hold the phase open.
 
-Phase 7 therefore stays 🚧 on one item only — P0 — even though every part (7.1–7.5) is
-implemented, CI-verified and exercised on the device.
+**Phase 7 is ✅ Done (2026-10-23).** Every part (7.1–7.5) is implemented, CI-verified and
+exercised on the device, the signing gate is closed by evidence from nine runs, and P0 —
+the one item that gates Phase 8 — passes on the owner's own phone.

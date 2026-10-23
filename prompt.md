@@ -156,11 +156,12 @@
   **not** yet proven, and the two-run fingerprint comparison is still owed.
 
 - **Owner decision 2026-10-23 — suggested default categories (R2a):** categories are
-  **suggested, not silently filled**; the owner accepts with one tap. Scheduled **after
-  Phase 7 closes**, using only `ApplicationInfo.category` plus the system-life-app rule,
-  never overwriting an existing assignment, no suggestion when ambiguous, earning apps
-  never auto-suggested. Do not implement it inside the data-safety phase and do not
-  re-ask the choice. Follow-up queue is in `docs/ROADMAP.md` (R2a, the missing per-app
+  **suggested, not silently filled**; the owner accepts with one tap. **Delivered as F1
+  on 2026-10-23, after Phase 7 closed.** Implemented with only `ApplicationInfo.category`
+  plus the system-life-app rule, never overwriting an existing assignment, no suggestion
+  when ambiguous, earning apps never auto-suggested. Do not re-ask the choice. Note the
+  recorded interpretation: "system → Life" covers the phone/messaging/system surfaces,
+  not every preinstalled app. Follow-up queue is in `docs/ROADMAP.md` (R2a, the missing per-app
   `limitMin` write path, and checking in the canonical Room schema).
 - Owner-local setup remains optional and on-device: enabled domains, timetable,
   app lists, reminder windows and routines are not committed or asked as a blocking
@@ -174,7 +175,11 @@
 1. Read `docs/REQUIREMENTS.md`, `docs/ROADMAP.md`, `docs/DECISIONS.md`,
    `docs/UI_DESIGN.md` and the latest `docs/phases/` record — trust the repo, not
    memory. Ask nothing that is already recorded.
-2. Phase 7 is **complete except its P0 item**. Parts 7.1–7.5 are implemented and
+2. **Phase 7 is ✅ Done (2026-10-23).** P0 was measured, failed (+97 % on the
+   total), the measurement was rebuilt as screen-on clipped foreground time with the
+   launcher/system UI/dialer excluded, and the re-measure passed: Today 2 h 47 m against
+   Digital Wellbeing's 2 h 54 m (−4.0 %) and top app Chrome 57 m against 1 h 2 m
+   (−8.1 %). Phase 8 has **not** started. Earlier detail: Parts 7.1–7.5 are implemented and
    CI-verified (latest green `39900306233`, 30 tests), the signing gate is closed by
    evidence (four runs, one signer `533D76ED5C2E264779EE005C…`), and the owner reports
    on device: install, launch, a complete 14-table/538-row backup, a refused bad file,
@@ -186,12 +191,20 @@
    fixed in this
    phase: `app_info` had been empty since Phase 1 because `INSERT OR IGNORE` silently
    dropped every row that omitted the NOT NULL `alwaysAllowed` column (found from the
-   owner's backup; `6a9f708`). **Still owed:** the P0 comparison (Today's total and top
-   app vs Digital Wellbeing, ~10 %) on the `39900306233` APK — that is the one item
-   keeping Phase 7 🚧 and it also gates Phase 8. Do not mark Phase 7 ✅ without it, and
-   never commit the owner's backup JSON or secret values. Keep the full device matrix
-   at Phase 15.
-3. End each implementation phase with CI green and its `app-progress-apk`; the
+   owner's backup; `6a9f708`). **P0 is closed, not owed:** `39900306233` failed it
+   (+97 %) and `39906592546` passed it (−4.0 % total, −8.1 % top app) after the
+   measurement rebuild; both numbers and the diagnosis are in
+   `docs/phases/07-data-safety-migration.md` §9d–§9e. Never commit the owner's backup
+   JSON or secret values, and keep the full device matrix at Phase 15.
+3. **Phase 8 (Checklist core) is ✅ Done (2026-10-23) and merged to `main`.** Schema v6 adds `habit_rules`,
+   `checklist_tasks`, `checklist_occurrences` (primary key `kind:source:date`, so
+   generation is idempotent) and `completion_logs` (append-only, undo writes a row).
+   Today is the Command Center Checklist and the visible label is **Daily Logger**;
+   `io.github.pabi277.dayledger` and `dayledger.db` are unchanged. The schema-export
+   guard that hardcoded `5.json` was fixed under the owner's gate answer. Run `39913142388` is green (88 tests, `app-progress-apk` 18,519,606 B), the owner's
+   device smoke check reports every clause passing, and four defects it caught are fixed.
+   Record: `docs/phases/08-checklist-core.md`.
+4. End each implementation phase with CI green and its `app-progress-apk`; the
    owner installs it and records a short smoke check plus the phase-specific
    evidence in the phase record. Update roadmap/prompt and stop at the merge gate.
    No PR or merge without an explicit command.

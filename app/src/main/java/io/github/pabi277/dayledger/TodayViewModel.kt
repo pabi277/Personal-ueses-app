@@ -72,13 +72,15 @@ class TodayViewModel(app: Application) : AndroidViewModel(app) {
             _state.value = _state.value.copy(isLoading = true, error = null)
             try {
                 val today = LocalDate.now().toString()
-                val apps = repo.usageForDate(today)
+                // Screen-on foreground time, with the Digital Wellbeing exclusions
+                // applied, and a total that is exactly the sum of the listed rows.
+                val apps = repo.screenUsageForDate(today)
                 val info = repo.appInfoAll().associateBy { it.packageName }
                 val cats = repo.categoriesAll()
                 val hourlyEntities = repo.hourlyForDate(today)
                 val hourly = IntArray(24)
                 for (h in hourlyEntities) if (h.hour in 0..23) hourly[h.hour] = h.minutes
-                val total = repo.totalForDate(today)
+                val total = apps.sumOf { it.foregroundMinutes }
                 _state.value = _state.value.copy(
                     totalMinutes = total,
                     apps = apps,

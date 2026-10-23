@@ -62,8 +62,9 @@ Bootstrapped from AppFlow @ c8856022ca57cdf23ae78b9491481543db89438d on 2026-10-
 
 ### Phase 7 — Data safety and migration foundation (no checklist features)
 
-> 🚧 **Status: parts 7.1–7.5 complete, CI-verified and exercised on the owner's
-> device; only the P0 comparison remains (2026-10-23).** The signing gate failed first
+> ✅ **Status: Done (2026-10-23) — P0 passes on the owner's phone: Today 2 h 47 m
+> against Digital Wellbeing's 2 h 54 m (−4.0 %) and top app Chrome 57 m against 1 h 2 m
+> (−8.1 %), both inside the ~10 % the kill test allows.** The signing gate failed first
 > and was closed by evidence afterwards: progress APKs were signed by a per-runner
 > throwaway key (measured — `DC13157E…` vs `B988DBD3…` on one tree) and the release job
 > was missing the name `ANDROID_KEYSTORE_BASE64`; the owner then created a keystore
@@ -78,8 +79,10 @@ Bootstrapped from AppFlow @ c8856022ca57cdf23ae78b9491481543db89438d on 2026-10-
 > update-over-install of a later owner-keyed APK, and a restore corroborated by the
 > owner's own exports — seven historical days return identical after clear-data and six
 > configuration tables return row-for-row identical; the `app_info` fix shows 0 → 72
-> labelled rows. **Outstanding to mark Done:** the P0 number comparison against Digital Wellbeing that this phase's
-> Done-means requires before Phase 8. Evidence:
+> labelled rows. **P0 was measured, failed at +97 %, the measurement was rebuilt as
+> screen-on clipped foreground time with launcher/system UI/dialer excluded, and the
+> re-measure passed** — the failure and its diagnosis are kept in the phase record because
+> they are what closed the gate. Evidence:
 > [`docs/phases/07-data-safety-migration.md`](phases/07-data-safety-migration.md).
 
 #### Historical Room inventory (verified from Git history, 2026-10-22)
@@ -184,11 +187,24 @@ Phase 15.
 
 | # | Item | Scope | Status |
 |---|---|---|---|
-| F1 | **R2a — suggested default categories** (owner, 2026-10-23): the Categories screen suggests a category per unclassified app from the device's `ApplicationInfo.category` + system-life-app rule; the owner accepts with one tap; existing assignments are never overwritten or re-suggested; ambiguous apps get no suggestion; earning apps are never auto-suggested. No schema change, no new permission, mapping unit-tested with fictional packages. | small increment, after Phase 7 | 📋 planned |
-| F2 | **Per-app `limitMin` has no write path** — the Limits screen only toggles always-allowed, so R16's per-app limits are unimplemented rather than unpersisted. Needs an owner decision on whether Phase 8 or a dedicated limits increment implements it. | Phase 4 scope | 📋 planned |
+| F1 | **R2a — suggested default categories** (owner, 2026-10-23): the Categories screen suggests a category per unclassified app from the device's `ApplicationInfo.category` + system-life-app rule; the owner accepts with one tap; existing assignments are never overwritten or re-suggested; ambiguous apps get no suggestion; earning apps are never auto-suggested. No schema change, no new permission, mapping unit-tested with fictional packages. **Delivered 2026-10-23:** `CategorySuggestionRules` (pure) + a "Suggested categories" section with **Use …** / **Not now**; dismissals are stored in `settings` (no schema change); earning apps are identified by package marker *and* by any package the owner has logged earnings against. One interpretation is recorded for correction: "system → Life" is applied to the phone/messaging/system surfaces (dialer, SMS, home, system UI, Settings, contacts), **not** to every preinstalled app, because suggesting life for a preinstalled browser would invite a wrong one-tap accept. **15 new unit tests** (67 in the tree; run `39907405321`, commit `784b92e`, success — an earlier commit message said 12, which was miscounted). | small increment, after Phase 7 | ✅ done |
+| F2 | **Per-app `limitMin` has neither a write nor a read path** (inspected 2026-10-23). The Limits screen only toggles always-allowed, and `BlockerAccessibilityService` compares `foregroundMinutes` against the **category** budget (`categoryDao().all().firstOrNull { it.name == category }?.budgetMin`) — the only writes to `limitMin` in the codebase are `0` placeholders in `BlockScreenActivity`'s limit-event rows. So the column is unwired in both directions, and R16's per-app limits are unimplemented rather than merely unpersisted. Implementing it means a write path *and* a precedence rule (app limit versus category budget versus always-allowed versus an active earning session), which is more than one UI field. Placement is an owner decision. | **Owner decision 2026-10-23:** its own dedicated limits increment after Phase 8 closes, with the **per-app limit overriding the category budget** (the category budget then applies only to apps without an explicit limit). Everything else — earning-session and always-allowed precedence, whether a reached limit writes a `limit_events` row — is settled inside that increment. | Phase 4 scope | 📋 planned |
 | F3 | **Check in the canonical Room schema** (`app/schemas/…/5.json`) — CI exports and verifies it every run, but the file is not in the tree because artifact downloads are blocked in the agent's environment. One download closes it. | housekeeping | 📋 planned |
 
 ### Phase 8 — Checklist core
+
+> ✅ **Status: Done (2026-10-23).** Schema v6 adds `habit_rules`, `checklist_tasks`,
+> `checklist_occurrences` (deterministic `kind:source:date` key, so generation is
+> idempotent) and `completion_logs` (append-only; undo writes a row). Today is the Command
+> Center Checklist and the visible label is **Daily Logger**; `io.github.pabi277.dayledger`
+> and `dayledger.db` are unchanged. Run `39913142388` green on **88** tests with one signer
+> `533D76ED5C2E264779EE005C…`, `room-schema` 2,378 B and `app-progress-apk` 18,519,606 B.
+> The owner's device smoke check reports every Done-means clause passing, and it caught
+> four defects that are now fixed: skipped rows sitting under a "Done" heading, an
+> unreachable Sunday weekday chip, raw `Chosen days: 4` text, and the Plan screen's
+> overflowing template row with its four pre-filled seeded routines. Merged to `main`
+> 2026-10-23. Full record:
+> [`docs/phases/08-checklist-core.md`](phases/08-checklist-core.md).
 
 **Parts**
 

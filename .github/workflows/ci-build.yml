@@ -244,9 +244,13 @@ jobs:
         run: |
           set -uo pipefail
           ls -l app/schemas/*/ || true
-          SCHEMA=$(find app/schemas -name "5.json" | head -n 1)
+          # Version-agnostic on purpose (owner-approved 2026-10-23): the database
+          # version now moves with the phase (v5 in Phase 7, v6 in Phase 8), so a
+          # hardcoded filename rots at every schema bump. What this step exists to
+          # prove is that Room exported a schema and to print its identityHash.
+          SCHEMA=$(ls -1 app/schemas/*/*.json 2>/dev/null | sort -V | tail -n 1) || true
           if [[ -z "$SCHEMA" ]]; then
-            echo "::error::Room did not export the v5 schema"
+            echo "::error::Room did not export any schema"
             exit 1
           fi
           echo "Exported: $SCHEMA"

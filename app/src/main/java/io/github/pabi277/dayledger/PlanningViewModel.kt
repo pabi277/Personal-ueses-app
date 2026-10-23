@@ -15,6 +15,8 @@ data class PlanningUiState(
     val dateKey: String = "",
     val blocks: List<BlockEntity> = emptyList(),
     val templates: List<TemplateEntity> = emptyList(),
+    /** templateId -> number of blocks it would apply. Shown so an empty template is obvious. */
+    val templateItemCounts: Map<String, Int> = emptyMap(),
     val isLoading: Boolean = false
 )
 
@@ -32,8 +34,17 @@ class PlanningViewModel(app: Application) : AndroidViewModel(app) {
                 dateKey = dk,
                 blocks = repo.blocksForDate(dk),
                 templates = repo.templates(),
+                templateItemCounts = repo.templateItemCounts(),
                 isLoading = false
             )
+        }
+    }
+
+    /** Owner-initiated removal of a template and its blocks. */
+    fun deleteTemplate(templateId: String) {
+        viewModelScope.launch {
+            repo.deleteTemplate(templateId)
+            load(_state.value.dateKey)
         }
     }
 

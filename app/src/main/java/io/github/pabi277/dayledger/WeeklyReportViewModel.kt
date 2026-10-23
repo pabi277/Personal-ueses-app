@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.pabi277.dayledger.data.DayLedgerDatabase
+import io.github.pabi277.dayledger.data.UsageRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,6 +18,7 @@ data class WeeklyReportUiState(
 
 class WeeklyReportViewModel(app: Application) : AndroidViewModel(app) {
     private val db = DayLedgerDatabase.getInstance(app)
+    private val usageRepo = UsageRepository(app)
     private val _state = MutableStateFlow(WeeklyReportUiState())
     val state: StateFlow<WeeklyReportUiState> = _state.asStateFlow()
 
@@ -30,7 +32,7 @@ class WeeklyReportViewModel(app: Application) : AndroidViewModel(app) {
             val overrides = db.limitEventDao().forDate(LocalDate.now().toString()).count { it.overrideType != "none" }
             for (i in 0..6) {
                 val d = LocalDate.now().minusDays(i.toLong()).toString()
-                totalMin += db.usageDao().totalForDate(d)
+                totalMin += usageRepo.screenMinutesForDate(d)
                 totalPaise += db.earningDao().totalForDate(d)
                 learnMin += db.learningDao().forDate(d).sumOf { it.minutes }
             }

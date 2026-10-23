@@ -310,6 +310,26 @@
   **no** suggestion when the signal is ambiguous, and never auto-suggest earning apps.
 - Trigger for starting it: Phase 7 marked ✅ (its P0 item) and merged.
 
+## Owner update — per-app limits (F2) and the Phase 8 device check (2026-10-23)
+
+- **Asked:** where per-app `limitMin` should be implemented. **Answer: its own dedicated
+  limits increment, after Phase 8 closes** — not folded into Phase 8, which is checklist
+  core. Rationale kept with the decision: the column turns out to have neither a write
+  *nor* a read path (`BlockerAccessibilityService` compares against the category budget),
+  so the work is an enforcement rule, not a number field, and widening Phase 8 with it
+  would break the one-phase-per-chat discipline.
+- **Asked:** when both a per-app limit and a category budget exist, which wins.
+  **Answer: the per-app limit overrides the category budget.** The category budget applies
+  only to apps with no explicit per-app limit. This is recorded as the precedence rule the
+  limits increment must implement and unit-test — one rule, applied in one place, so an app
+  can never be blocked for a reason the owner cannot see.
+- Unanswered by this decision and still to be settled inside that increment: whether an
+  active earning session or `alwaysAllowed` outranks a per-app limit (today both short-circuit
+  before any comparison), and whether a reached limit writes a `limit_events` row.
+- **Phase 8 device check:** the owner will install `app-progress-apk` from run
+  `39908874710` and run the smoke check before Phase 8 is marked ✅. CI green is not
+  device evidence and must not be recorded as such.
+
 ## Open (current owner gates)
 
 - The 2026-10-15 decision batches and the 2026-10-22 product/delivery gate answers
